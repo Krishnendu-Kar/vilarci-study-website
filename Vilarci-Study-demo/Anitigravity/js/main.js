@@ -208,7 +208,6 @@
       showToast('Switched to Student View', 'info', 2500);
     }
 
-    // Refresh current view
     handleRouting();
   }
 
@@ -242,7 +241,6 @@
       v.classList.remove('active');
     });
 
-    // Check valid route
     var targetViewId = 'view-' + route;
     var targetView = document.getElementById(targetViewId);
 
@@ -402,10 +400,9 @@
     // Today's classes from timetable
     var classesList = document.getElementById('homeClassesList');
     if (classesList) {
-      // Days of week map: Mon, Tue, Wed, Thu, Fri, Sat
       var dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
       var todayDay = dayNames[new Date().getDay()];
-      if (todayDay === 'Sun') todayDay = 'Mon'; // Sunday fallback to Monday for demo
+      if (todayDay === 'Sun') todayDay = 'Mon'; // Sunday fallback for demo
 
       var todayBadge = document.getElementById('homeTodayDayBadge');
       if (todayBadge) todayBadge.textContent = todayDay + ' Schedule';
@@ -418,13 +415,13 @@
         classesList.innerHTML = '<div class="text-sm text-secondary p-12">No classes scheduled for today. Take time to revise!</div>';
       } else {
         classesList.innerHTML = todaysSchedule.map(function (item, idx) {
-          var isDone = idx === 0; // mark first class completed for lively demo
+          var isDone = idx === 0;
           return (
-            '<div class="class-item' + (isDone ? ' done' : '') + '">' +
-              '<div class="class-time">' + item.start_time + ' - ' + item.end_time + '</div>' +
+            '<div style="display:flex; align-items:center; gap:14px; padding:12px 14px; background:var(--surface-muted); border-radius:var(--radius-sm); border-left:3px solid ' + (isDone ? 'var(--accent)' : 'var(--primary)') + '; margin-bottom:8px;">' +
+              '<div style="font-size:12px; font-weight:700; color:var(--text-secondary); width:85px; flex-shrink:0;">' + item.start_time + ' - ' + item.end_time + '</div>' +
               '<div style="flex:1;">' +
-                '<div class="class-subject">' + item.subject + ' ' + (isDone ? '<span class="badge badge-success">Completed</span>' : '<span class="badge badge-primary">Next</span>') + '</div>' +
-                '<div class="class-teacher">' + item.teacher + '</div>' +
+                '<div style="font-size:14px; font-weight:700; color:var(--text-main);">' + item.subject + ' ' + (isDone ? '<span class="badge badge-success">Completed</span>' : '<span class="badge badge-primary">Next Up</span>') + '</div>' +
+                '<div style="font-size:12px; color:var(--text-secondary); margin-top:2px;">' + item.teacher + ' &bull; ' + (item.room || 'Room 101') + '</div>' +
               '</div>' +
             '</div>'
           );
@@ -436,7 +433,7 @@
     var nextTestContainer = document.getElementById('homeNextTestContainer');
     if (nextTestContainer) {
       var upcomingTest = (DATA.tests || [])[0] || {
-        name: 'Unit Test 3',
+        name: 'Unit Assessment 3',
         subject: 'Maths & Physics',
         date: '2025-10-25',
         total_marks: 50,
@@ -445,9 +442,9 @@
       nextTestContainer.innerHTML =
         '<div style="display:flex; justify-content:space-between; align-items:center;">' +
           '<div>' +
-            '<h3 class="text-base fw-600">' + upcomingTest.name + '</h3>' +
+            '<h3 class="text-base fw-700">' + upcomingTest.name + '</h3>' +
             '<p class="text-sm text-secondary">' + upcomingTest.subject + ' • ' + upcomingTest.duration_min + ' mins</p>' +
-            '<div class="text-xs text-muted" style="margin-top:4px;">Date: ' + upcomingTest.date + '</div>' +
+            '<div class="text-xs text-muted" style="margin-top:4px;">Scheduled Date: ' + upcomingTest.date + '</div>' +
           '</div>' +
           '<div style="text-align:right;">' +
             '<span class="badge badge-warning">Max ' + upcomingTest.total_marks + ' Marks</span>' +
@@ -473,7 +470,6 @@
         var pct = sylTopics.length > 0 ? Math.round((coveredCount / sylTopics.length) * 100) : 60;
         var color = ringColors[subj] || '#4F46E5';
 
-        // SVG circle progress ring calculation
         var radius = 28;
         var circumference = 2 * Math.PI * radius;
         var offset = circumference - (pct / 100) * circumference;
@@ -502,33 +498,32 @@
           var childPending = childFees.length > 0 ? '₹' + childFees[0].amount : 'Paid';
 
           return (
-            '<div class="child-summary-card' + (isCurrent ? ' selected' : '') + '" data-student-id="' + child.id + '" style="' + (isCurrent ? 'border-color:var(--primary); background:var(--primary-bg);' : '') + '">' +
+            '<div class="child-summary-card' + (isCurrent ? ' selected' : '') + '" data-student-id="' + child.id + '" style="' + (isCurrent ? 'border-color:var(--primary); background:var(--primary-subtle);' : '') + '">' +
               '<div style="display:flex; justify-content:space-between; align-items:flex-start;">' +
-                '<div class="child-avatar" style="background:' + (child.color || 'var(--primary)') + '">' + child.photo_initials + '</div>' +
-                (isCurrent ? '<span class="badge badge-primary">Active Profile</span>' : '<span class="badge badge-neutral">Click to switch</span>') +
+                '<div class="child-avatar" style="background:' + (child.avatar_bg || 'var(--primary)') + '">' + child.photo_initials + '</div>' +
+                (isCurrent ? '<span class="badge badge-primary">Active Profile</span>' : '<span class="badge badge-neutral">Switch</span>') +
               '</div>' +
-              '<div class="child-name">' + child.name + '</div>' +
+              '<div class="child-name" style="font-size:16px; font-weight:700; margin-top:8px;">' + child.name + '</div>' +
               '<div class="child-stat-row">' +
-                '<span class="child-stat-label">Roll Number:</span>' +
-                '<span class="child-stat-value">' + child.roll + '</span>' +
-              '</div>' +
-              '<div class="child-stat-row">' +
-                '<span class="child-stat-label">Term Attendance:</span>' +
-                '<span class="child-stat-value" style="color:var(--accent);">' + (child.id === 'student-1' ? '88%' : '81%') + '</span>' +
+                '<span class="text-secondary">Roll Number:</span>' +
+                '<span class="fw-700">' + child.roll + '</span>' +
               '</div>' +
               '<div class="child-stat-row">' +
-                '<span class="child-stat-label">Fee Status:</span>' +
-                '<span class="child-stat-value" style="color:' + (childFees.length > 0 ? 'var(--error)' : 'var(--accent)') + ';">' + childPending + '</span>' +
+                '<span class="text-secondary">Attendance:</span>' +
+                '<span class="fw-700" style="color:var(--accent);">' + (child.id === 'student-1' ? '88%' : '82%') + '</span>' +
               '</div>' +
               '<div class="child-stat-row">' +
-                '<span class="child-stat-label">Study Points:</span>' +
-                '<span class="child-stat-value">' + child.points + ' pts</span>' +
+                '<span class="text-secondary">Fee Status:</span>' +
+                '<span class="fw-700" style="color:' + (childFees.length > 0 ? 'var(--error)' : 'var(--accent)') + ';">' + childPending + '</span>' +
+              '</div>' +
+              '<div class="child-stat-row">' +
+                '<span class="text-secondary">Study Points:</span>' +
+                '<span class="fw-700">' + child.points + ' pts</span>' +
               '</div>' +
             '</div>'
           );
         }).join('');
 
-        // Card click event to switch student
         var cards = homeParentChildrenView.querySelectorAll('.child-summary-card');
         cards.forEach(function (card) {
           card.addEventListener('click', function () {
@@ -560,21 +555,18 @@
     if (!grid) return;
 
     var daysInMonth = new Date(currentYear, currentMonthIndex + 1, 0).getDate();
-    var firstDayOfWeek = new Date(currentYear, currentMonthIndex, 1).getDay(); // 0=Sun
+    var firstDayOfWeek = new Date(currentYear, currentMonthIndex, 1).getDay();
 
     var html = '';
-    // Weekday headers (Sun to Sat)
     var dHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     dHeaders.forEach(function (d) {
       html += '<div class="cal-day-header">' + d + '</div>';
     });
 
-    // Empty lead cells
     for (var i = 0; i < firstDayOfWeek; i++) {
       html += '<div class="cal-day cal-day-empty"></div>';
     }
 
-    // Days in Month
     var monthStr = String(currentMonthIndex + 1).padStart(2, '0');
     var presentCount = 0;
     var lateCount = 0;
@@ -586,13 +578,11 @@
       var checkDate = new Date(currentYear, currentMonthIndex, d);
       var isSunday = checkDate.getDay() === 0;
 
-      // Find records for this date
       var dayRecords = (STATE.attendance || []).filter(function (a) {
         return a.student_id === currentStudentId && a.date === dateKey;
       });
 
       var dayClass = 'cal-day';
-      var statusBadge = '';
 
       if (isSunday) {
         dayClass += ' cal-day-noclass';
@@ -613,7 +603,6 @@
         dayClass += ' cal-day-future';
       }
 
-      // Check if today
       var now = new Date();
       if (now.getDate() === d && now.getMonth() === currentMonthIndex && now.getFullYear() === currentYear) {
         dayClass += ' cal-day-today';
@@ -624,37 +613,35 @@
 
     grid.innerHTML = html;
 
-    // Monthly summary badge & metrics
     var totalAttended = presentCount + lateCount;
     var monthPct = totalSchoolDays > 0 ? Math.round((totalAttended / totalSchoolDays) * 100) : 0;
 
     var calSummaryBadge = document.getElementById('calSummaryBadge');
     if (calSummaryBadge) {
-      calSummaryBadge.textContent = monthPct + '% Monthly Rate';
+      calSummaryBadge.textContent = monthPct + '% Attendance';
     }
 
     var metricsContainer = document.getElementById('attendanceSummaryMetrics');
     if (metricsContainer) {
       metricsContainer.innerHTML =
         '<h3 class="card-title mb-16">Monthly Statistics</h3>' +
-        '<div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:8px; text-align:center;">' +
-          '<div style="padding:10px; background:var(--accent-bg); border-radius:var(--radius-sm);">' +
-            '<div class="text-xl fw-700" style="color:var(--accent-dark);">' + presentCount + '</div>' +
+        '<div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:10px; text-align:center;">' +
+          '<div style="padding:12px; background:var(--accent-subtle); border-radius:var(--radius-sm); border:1px solid rgba(16,185,129,0.2);">' +
+            '<div class="text-2xl fw-800" style="color:var(--accent);">' + presentCount + '</div>' +
             '<div class="text-xs text-muted">Present</div>' +
           '</div>' +
-          '<div style="padding:10px; background:var(--warning-bg); border-radius:var(--radius-sm);">' +
-            '<div class="text-xl fw-700" style="color:var(--warning);">' + lateCount + '</div>' +
+          '<div style="padding:12px; background:var(--warning-bg); border-radius:var(--radius-sm); border:1px solid rgba(245,158,11,0.2);">' +
+            '<div class="text-2xl fw-800" style="color:var(--warning);">' + lateCount + '</div>' +
             '<div class="text-xs text-muted">Late</div>' +
           '</div>' +
-          '<div style="padding:10px; background:var(--error-bg); border-radius:var(--radius-sm);">' +
-            '<div class="text-xl fw-700" style="color:var(--error);">' + absentCount + '</div>' +
+          '<div style="padding:12px; background:var(--error-bg); border-radius:var(--radius-sm); border:1px solid rgba(239,68,68,0.2);">' +
+            '<div class="text-2xl fw-800" style="color:var(--error);">' + absentCount + '</div>' +
             '<div class="text-xs text-muted">Absent</div>' +
           '</div>' +
         '</div>' +
-        '<div class="text-xs text-secondary" style="margin-top:14px; text-align:center;">Total working classes evaluated: ' + totalSchoolDays + '</div>';
+        '<div class="text-xs text-secondary" style="margin-top:14px; text-align:center;">Academic sessions evaluated: ' + totalSchoolDays + '</div>';
     }
 
-    // Subject Breakdown list
     var subjectAttList = document.getElementById('subjectAttList');
     if (subjectAttList) {
       var subjects = ['Maths', 'Physics', 'Chemistry', 'Biology', 'English'];
@@ -679,13 +666,12 @@
       }).join('');
     }
 
-    // Calendar month nav handlers
     var prevBtn = document.getElementById('calPrevMonth');
     var nextBtn = document.getElementById('calNextMonth');
 
     if (prevBtn) {
       prevBtn.onclick = function () {
-        if (currentMonthIndex > 7) { // limit between Aug and Oct 2025 demo
+        if (currentMonthIndex > 7) {
           currentMonthIndex--;
           renderAttendanceView();
         } else {
@@ -705,12 +691,11 @@
       };
     }
 
-    // Simulate QR Scan Button
+    // Simulate QR Scan Check-In
     var qrBtn = document.getElementById('btnQrScan');
     if (qrBtn) {
       qrBtn.onclick = function () {
-        var todayStr = currentYear + '-10-17'; // simulated current date
-        // Mark today as present
+        var todayStr = currentYear + '-10-17';
         var existing = (STATE.attendance || []).find(function (a) {
           return a.student_id === currentStudentId && a.date === todayStr;
         });
@@ -727,7 +712,6 @@
           });
         }
 
-        // Award attendance points
         STATE.points += 10;
         STATE.points_history.unshift({
           id: 'ph-qr-' + Date.now(),
@@ -735,14 +719,14 @@
           date: todayStr,
           action: 'attendance_qr',
           points: 10,
-          description: 'QR Code attendance check-in verified'
+          description: 'QR Code attendance verified on arrival'
         });
 
         Store.set('vs_attendance', STATE.attendance);
         Store.set('vs_points', STATE.points);
         Store.set('vs_points_history', STATE.points_history);
 
-        showToast('✅ QR Attendance Marked Present! (+10 pts)', 'success', 3500);
+        showToast('✅ QR Attendance Confirmed! (+10 pts)', 'success', 3500);
         renderAttendanceView();
       };
     }
@@ -769,8 +753,8 @@
 
     if (pendingNotice) {
       pendingNotice.textContent = pendingItem
-        ? 'Pending for ' + pendingItem.month + ' (Due: ' + pendingItem.due_date + ')'
-        : 'All tuition fees are fully settled. No dues outstanding!';
+        ? 'Pending for ' + pendingItem.month + ' due by ' + pendingItem.due_date
+        : 'All tuition installments are fully settled. No pending dues!';
     }
 
     if (btnPayPending) {
@@ -787,7 +771,7 @@
     if (!tbody) return;
 
     if (studentFees.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted p-24">No fee records found for this student.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted p-24">No fee records found for this student profile.</td></tr>';
       return;
     }
 
@@ -795,27 +779,26 @@
       var isPending = fee.status === 'pending';
       var statusBadge = isPending
         ? '<span class="badge badge-error">Pending</span>'
-        : '<span class="badge badge-success">Paid</span>';
+        : '<span class="badge badge-success">Settled</span>';
 
       return (
         '<tr class="' + (isPending ? 'table-row-highlight' : '') + '">' +
-          '<td class="fw-600">' + fee.month + '</td>' +
+          '<td class="fw-700">' + fee.month + '</td>' +
           '<td>' + fee.due_date + '</td>' +
-          '<td class="fw-700">₹' + fee.amount.toLocaleString() + '</td>' +
+          '<td class="fw-800">₹' + fee.amount.toLocaleString() + '</td>' +
           '<td>' + statusBadge + '</td>' +
           '<td>' + (fee.mode || '<span class="text-muted">—</span>') + '</td>' +
           '<td>' + (fee.receipt_no ? '<code>' + fee.receipt_no + '</code>' : '<span class="text-muted">—</span>') + '</td>' +
           '<td style="text-align:right;">' +
             (isPending
               ? '<button type="button" class="btn btn-sm btn-primary btn-pay-row" data-fee-id="' + fee.id + '">Pay Now</button>'
-              : '<button type="button" class="btn btn-sm btn-secondary btn-view-receipt" data-fee-id="' + fee.id + '">View Receipt</button>'
+              : '<button type="button" class="btn btn-sm btn-secondary btn-view-receipt" data-fee-id="' + fee.id + '">Voucher</button>'
             ) +
           '</td>' +
         '</tr>'
       );
     }).join('');
 
-    // Attach row events
     var payBtns = tbody.querySelectorAll('.btn-pay-row');
     payBtns.forEach(function (btn) {
       btn.addEventListener('click', function () {
@@ -838,32 +821,32 @@
   function openPaymentModal(feeItem) {
     var student = getActiveStudent();
     var modalBodyHtml =
-      '<div style="text-align:center; padding:12px 0;">' +
-        '<div class="badge badge-warning mb-12">Simulated Gateway • Demo Only</div>' +
-        '<div class="text-xs text-secondary uppercase fw-600">Amount Due</div>' +
-        '<div class="text-4xl fw-700 mb-16" style="color:var(--primary);">₹' + feeItem.amount.toLocaleString() + '</div>' +
-        '<div class="text-sm text-secondary mb-16">Payment for: <strong>' + feeItem.month + '</strong><br>Student: ' + student.name + ' (' + student.roll + ')</div>' +
-        '<div style="background:var(--surface-2); border-radius:var(--radius-sm); padding:16px; margin-bottom:16px; text-align:left;">' +
-          '<div class="text-xs fw-600 text-secondary mb-8">Choose Simulated Payment Mode:</div>' +
-          '<label style="display:flex; align-items:center; gap:8px; margin-bottom:8px; cursor:pointer;">' +
-            '<input type="radio" name="mockPayMode" value="UPI" checked> Instant UPI (GPay / PhonePe / Paytm)' +
+      '<div style="text-align:center; padding:10px 0;">' +
+        '<div class="badge badge-warning mb-12">Simulated Gateway &bull; Demo Prototype</div>' +
+        '<div class="text-xs text-muted uppercase fw-700">Amount Due</div>' +
+        '<div class="text-4xl fw-800 mb-16" style="color:var(--primary);">₹' + feeItem.amount.toLocaleString() + '</div>' +
+        '<div class="text-sm text-secondary mb-16">Payment for: <strong>' + feeItem.month + '</strong><br>Candidate: ' + student.name + ' (' + student.roll + ')</div>' +
+        '<div style="background:var(--surface-muted); border-radius:var(--radius-md); padding:16px; margin-bottom:16px; text-align:left; border:1px solid var(--border);">' +
+          '<div class="text-xs fw-700 text-muted uppercase mb-8">Choose Simulated Payment Mode:</div>' +
+          '<label style="display:flex; align-items:center; gap:10px; margin-bottom:10px; cursor:pointer; font-size:14px; font-weight:600;">' +
+            '<input type="radio" name="mockPayMode" value="Instant UPI" checked> Instant UPI (Google Pay / PhonePe / Paytm)' +
           '</label>' +
-          '<label style="display:flex; align-items:center; gap:8px; margin-bottom:8px; cursor:pointer;">' +
-            '<input type="radio" name="mockPayMode" value="Net Banking"> Net Banking / IMPS' +
+          '<label style="display:flex; align-items:center; gap:10px; margin-bottom:10px; cursor:pointer; font-size:14px; font-weight:600;">' +
+            '<input type="radio" name="mockPayMode" value="Net Banking"> Net Banking / IMPS Direct' +
           '</label>' +
-          '<label style="display:flex; align-items:center; gap:8px; cursor:pointer;">' +
+          '<label style="display:flex; align-items:center; gap:10px; cursor:pointer; font-size:14px; font-weight:600;">' +
             '<input type="radio" name="mockPayMode" value="Credit/Debit Card"> Debit / Credit Card' +
           '</label>' +
         '</div>' +
-        '<p class="text-xs text-muted">Clicking "Simulate Payment" will immediately update the local ledger and generate an official coaching receipt.</p>' +
+        '<p class="text-xs text-muted">Clicking "Authorize Payment" will immediately update the local fee ledger and generate an official coaching receipt voucher.</p>' +
       '</div>';
 
     var modalFooterHtml =
       '<button type="button" class="btn btn-secondary" id="btnCancelModal">Cancel</button>' +
-      '<button type="button" class="btn btn-accent btn-lg" id="btnConfirmMockPay">Confirm Payment (₹' + feeItem.amount.toLocaleString() + ')</button>';
+      '<button type="button" class="btn btn-accent btn-lg" id="btnConfirmMockPay">Authorize Payment (₹' + feeItem.amount.toLocaleString() + ')</button>';
 
     openModal({
-      title: 'Pay Tuition Fees',
+      title: 'Tuition Fee Settlement',
       body: modalBodyHtml,
       footer: modalFooterHtml,
       onReady: function (overlay, closeModal) {
@@ -873,21 +856,18 @@
         var confirmBtn = overlay.querySelector('#btnConfirmMockPay');
         if (confirmBtn) {
           confirmBtn.onclick = function () {
-            var selectedMode = 'UPI';
+            var selectedMode = 'Instant UPI';
             var checkedRadio = overlay.querySelector('input[name="mockPayMode"]:checked');
             if (checkedRadio) selectedMode = checkedRadio.value;
 
-            // Generate receipt number
             var receiptNo = 'RCP-2025-' + Math.floor(100 + Math.random() * 900);
             var nowStr = new Date().toISOString().split('T')[0];
 
-            // Update state
             feeItem.status = 'paid';
             feeItem.mode = selectedMode;
             feeItem.paid_date = nowStr;
             feeItem.receipt_no = receiptNo;
 
-            // Award points for timely fee clearance
             STATE.points += 40;
             STATE.points_history.unshift({
               id: 'ph-fee-' + Date.now(),
@@ -895,7 +875,7 @@
               date: nowStr,
               action: 'fee_payment',
               points: 40,
-              description: 'Tuition fees paid on time for ' + feeItem.month
+              description: 'Tuition fee cleared for ' + feeItem.month
             });
 
             Store.set('vs_fees', STATE.fees);
@@ -903,10 +883,9 @@
             Store.set('vs_points_history', STATE.points_history);
 
             closeModal();
-            showToast('🎉 Fee payment of ₹' + feeItem.amount + ' confirmed! (+40 pts)', 'success', 4000);
+            showToast('🎉 Fee payment of ₹' + feeItem.amount + ' verified! (+40 pts)', 'success', 4000);
             renderFeesView();
 
-            // Display Receipt
             setTimeout(function () {
               showReceiptModal(feeItem);
             }, 300);
@@ -919,33 +898,33 @@
   function showReceiptModal(feeItem) {
     var student = getActiveStudent();
     var receiptBodyHtml =
-      '<div style="background:white; color:#0F172A; padding:20px; border-radius:var(--radius-sm); border:1px solid #CBD5E1; font-family:var(--font);">' +
-        '<div style="text-align:center; border-bottom:1.5px dashed #94A3B8; padding-bottom:12px; margin-bottom:12px;">' +
-          '<div style="font-weight:700; font-size:1.1rem; color:var(--primary);">' + (DATA.center ? DATA.center.name : 'Stellar Academy') + '</div>' +
-          '<div style="font-size:0.75rem; color:#64748B;">Official Coaching Fee Receipt Voucher</div>' +
+      '<div style="background:#FFFFFF; color:#0F172A; padding:22px; border-radius:var(--radius-md); border:1px solid #CBD5E1; font-family:var(--font-sans);">' +
+        '<div style="text-align:center; border-bottom:1.5px dashed #94A3B8; padding-bottom:14px; margin-bottom:14px;">' +
+          '<div style="font-weight:800; font-size:1.2rem; color:var(--primary);">' + (DATA.center ? DATA.center.name : 'Stellar Academy') + '</div>' +
+          '<div style="font-size:0.8rem; color:#64748B;">Official Coaching Fee Receipt Voucher</div>' +
           '<div style="font-size:0.75rem; color:#64748B;">' + (DATA.center ? DATA.center.address : '') + '</div>' +
         '</div>' +
-        '<table style="width:100%; font-size:0.85rem; margin-bottom:12px;">' +
-          '<tr><td style="color:#64748B; width:120px;">Receipt No:</td><td class="fw-600"><code>' + feeItem.receipt_no + '</code></td></tr>' +
+        '<table style="width:100%; font-size:0.85rem; margin-bottom:14px;">' +
+          '<tr><td style="color:#64748B; width:130px;">Receipt Voucher:</td><td class="fw-700"><code>' + feeItem.receipt_no + '</code></td></tr>' +
           '<tr><td style="color:#64748B;">Payment Date:</td><td>' + (feeItem.paid_date || feeItem.due_date) + '</td></tr>' +
-          '<tr><td style="color:#64748B;">Student:</td><td class="fw-600">' + student.name + ' (' + student.roll + ')</td></tr>' +
-          '<tr><td style="color:#64748B;">Class/Batch:</td><td>Class 10 Morning Batch</td></tr>' +
+          '<tr><td style="color:#64748B;">Candidate:</td><td class="fw-700">' + student.name + ' (' + student.roll + ')</td></tr>' +
+          '<tr><td style="color:#64748B;">Course/Batch:</td><td>Class 10 Morning Batch</td></tr>' +
           '<tr><td style="color:#64748B;">Tuition Month:</td><td>' + feeItem.month + '</td></tr>' +
-          '<tr><td style="color:#64748B;">Payment Mode:</td><td>' + (feeItem.mode || 'UPI') + '</td></tr>' +
-          '<tr><td style="color:#64748B; font-weight:700; border-top:1px solid #E2E8F0; padding-top:6px;">Amount Paid:</td><td style="font-weight:700; color:#10B981; font-size:1.1rem; border-top:1px solid #E2E8F0; padding-top:6px;">₹' + feeItem.amount.toLocaleString() + '</td></tr>' +
+          '<tr><td style="color:#64748B;">Authorized Mode:</td><td>' + (feeItem.mode || 'Instant UPI') + '</td></tr>' +
+          '<tr><td style="color:#64748B; font-weight:700; border-top:1px solid #E2E8F0; padding-top:8px;">Amount Received:</td><td style="font-weight:800; color:#10B981; font-size:1.15rem; border-top:1px solid #E2E8F0; padding-top:8px;">₹' + feeItem.amount.toLocaleString() + '</td></tr>' +
         '</table>' +
-        '<div style="text-align:center; padding:8px; background:#ECFDF5; border-radius:4px; color:#065F46; font-size:0.75rem; font-weight:600;">' +
-          'STATUS: PAYMENT VERIFIED &bull; RECORD STORED' +
+        '<div style="text-align:center; padding:8px; background:#ECFDF5; border-radius:4px; color:#065F46; font-size:0.75rem; font-weight:700;">' +
+          'STATUS: PAYMENT VERIFIED &bull; OFFICIAL LEDGER STORED' +
         '</div>' +
         '<div style="text-align:center; font-size:0.65rem; color:#94A3B8; margin-top:12px;">' +
-          'Simulated payment voucher for Vilarci Study demonstration.' +
+          'Simulated digital fee voucher generated by Vilarci Study portal.' +
         '</div>' +
       '</div>';
 
     openModal({
-      title: 'Fee Payment Receipt',
+      title: 'Fee Receipt Voucher',
       body: receiptBodyHtml,
-      footer: '<button type="button" class="btn btn-secondary" onclick="window.print()">Print Receipt</button>'
+      footer: '<button type="button" class="btn btn-secondary" onclick="window.print()">Print Voucher</button>'
     });
   }
 
@@ -971,7 +950,6 @@
       };
     }
 
-    // Render Weekly Timetable Matrix
     var ttBody = document.getElementById('timetableGridBody');
     if (ttBody) {
       var timeSlots = [
@@ -981,7 +959,7 @@
       var days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
       ttBody.innerHTML = timeSlots.map(function (ts) {
-        var rowHtml = '<tr><td class="fw-600 text-xs">' + ts.label + '</td>';
+        var rowHtml = '<tr><td class="fw-700 text-xs">' + ts.label + '</td>';
         days.forEach(function (day) {
           var entry = (DATA.timetable || []).find(function (t) {
             return t.day_of_week === day && t.start_time === ts.slot;
@@ -992,7 +970,7 @@
             rowHtml +=
               '<td>' +
                 '<span class="tt-cell ' + sClass + '">' + entry.subject + '</span>' +
-                '<div class="text-xs text-muted" style="margin-top:2px;">' + entry.teacher.split(' ').pop() + '</div>' +
+                '<div class="text-xs text-muted" style="margin-top:4px;">' + entry.teacher.split(' ').pop() + '</div>' +
               '</td>';
           } else {
             rowHtml += '<td><span class="tt-empty">—</span></td>';
@@ -1003,10 +981,8 @@
       }).join('');
     }
 
-    // Render Syllabus Tracker
     renderSyllabusSection('all');
 
-    // Subject Filter event listeners
     var filterContainer = document.getElementById('syllabusSubjectFilter');
     if (filterContainer) {
       var chips = filterContainer.querySelectorAll('.chip');
@@ -1036,15 +1012,13 @@
       var completionPct = topics.length > 0 ? Math.round((coveredCount / topics.length) * 100) : 0;
 
       return (
-        '<div class="syllabus-subject-section card mb-16">' +
+        '<div class="syllabus-subject-section card mb-20">' +
           '<div class="card-header">' +
             '<div>' +
-              '<h3 class="syllabus-subject-title">' + subj + '</h3>' +
-              '<span class="text-xs text-muted">' + coveredCount + ' of ' + topics.length + ' chapters finished</span>' +
+              '<h3 class="card-title">' + subj + '</h3>' +
+              '<span class="text-xs text-muted">' + coveredCount + ' of ' + topics.length + ' syllabus modules completed</span>' +
             '</div>' +
-            '<div style="text-align:right;">' +
-              '<span class="badge badge-primary">' + completionPct + '% Done</span>' +
-            '</div>' +
+            '<span class="badge badge-primary">' + completionPct + '% Done</span>' +
           '</div>' +
           '<div class="card-body">' +
             '<div class="progress-bar-track mb-16">' +
@@ -1064,8 +1038,8 @@
                 return (
                   '<div class="syllabus-topic-item ' + t.status + '">' +
                     '<div style="flex:1;">' +
-                      '<div class="topic-name fw-600">' + t.topic + ' ' + statusBadge + '</div>' +
-                      '<div class="topic-chapter text-xs text-muted">' + t.chapter + ' &bull; Planned: ' + t.planned_date + '</div>' +
+                      '<div class="fw-700 text-sm">' + t.topic + ' ' + statusBadge + '</div>' +
+                      '<div class="text-xs text-muted" style="margin-top:2px;">' + t.chapter + ' &bull; Scheduled: ' + t.planned_date + '</div>' +
                     '</div>' +
                     '<button type="button" class="revise-btn' + revisedClass + '" data-topic-id="' + t.id + '">' +
                       revisedText +
@@ -1079,7 +1053,6 @@
       );
     }).join('');
 
-    // Attach 'I revised this topic' button handlers
     var reviseBtns = container.querySelectorAll('.revise-btn');
     reviseBtns.forEach(function (btn) {
       btn.addEventListener('click', function () {
@@ -1095,7 +1068,7 @@
               date: new Date().toISOString().split('T')[0],
               action: 'topic_revised',
               points: 15,
-              description: 'Self-revision checked: ' + topic.topic
+              description: 'Self-revision confirmed: ' + topic.topic
             });
             showToast('Self-revision marked! (+15 pts)', 'success', 2500);
           } else {
@@ -1115,11 +1088,6 @@
   function extractYouTubeId(url) {
     if (!url) return null;
     var trimmed = url.trim();
-    // Patterns:
-    // youtube.com/watch?v=VIDEO_ID
-    // youtu.be/VIDEO_ID
-    // youtube.com/shorts/VIDEO_ID
-    // youtube.com/embed/VIDEO_ID
     var match = trimmed.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|shorts)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i);
     return (match && match[1]) ? match[1] : null;
   }
@@ -1134,7 +1102,6 @@
     var notesArea = document.getElementById('focusNotesArea');
     var notesSaved = document.getElementById('notesSavedIndicator');
 
-    // Load initial notes if any
     if (notesArea) {
       var savedNote = (STATE.video_notes || {})[currentFocusVideoId] || '';
       notesArea.value = savedNote;
@@ -1180,7 +1147,7 @@
           loadVideoById(vid);
         } else {
           if (errorSpan) errorSpan.classList.add('visible');
-          showToast('Invalid YouTube URL. Please check formatting.', 'error', 3000);
+          showToast('Invalid YouTube URL format.', 'error', 3000);
         }
       };
     }
@@ -1192,13 +1159,11 @@
       };
     }
 
-    // Initialize with default video if active
     if (layout && !iframe.src && currentFocusVideoId) {
       iframe.src = 'https://www.youtube-nocookie.com/embed/' + currentFocusVideoId + '?rel=0&autoplay=0';
       layout.classList.add('visible');
     }
 
-    // Mark topic done button
     var markDoneBtn = document.getElementById('btnFocusMarkTopicDone');
     if (markDoneBtn) {
       markDoneBtn.onclick = function () {
@@ -1217,7 +1182,6 @@
       };
     }
 
-    // Timer Controls
     setupFocusTimer();
   }
 
@@ -1300,7 +1264,6 @@
               }
               if (completeMsg) completeMsg.classList.add('visible');
 
-              // Award focus points & increment streak
               STATE.points += 50;
               STATE.streak += 1;
               STATE.focus_sessions.push({
@@ -1315,7 +1278,7 @@
                 date: new Date().toISOString().split('T')[0],
                 action: 'focus_completed',
                 points: 50,
-                description: 'Full focus timer study block completed'
+                description: 'Full focus timer study sprint completed'
               });
 
               Store.set('vs_points', STATE.points);
@@ -1323,7 +1286,7 @@
               Store.set('vs_focus_sessions', STATE.focus_sessions);
               Store.set('vs_points_history', STATE.points_history);
 
-              showToast('🏆 Focus block completed! +50 Points awarded!', 'success', 5000);
+              showToast('🏆 Focus session complete! +50 Points awarded!', 'success', 5000);
             }
           }, 1000);
         }
@@ -1372,7 +1335,7 @@
             '</div>' +
             '<h3 class="sim-title">' + s.title + '</h3>' +
             '<p class="sim-desc">' + s.description + '</p>' +
-            '<button type="button" class="btn btn-sm btn-secondary w-full">Launch Experiment &rarr;</button>' +
+            '<button type="button" class="btn btn-sm btn-secondary w-full">Launch Simulation &rarr;</button>' +
           '</div>'
         );
       }).join('');
@@ -1398,16 +1361,12 @@
       if (iframe) {
         iframe.src = sim.phet_url;
 
-        // Graceful fallback watchdog if simulation server blocks iframe embedding
         var loadTimeout = setTimeout(function () {
           try {
-            // Check cross-origin frame access
             if (!iframe.contentWindow || iframe.contentWindow.location.href === 'about:blank') {
               if (fallback) fallback.classList.add('visible');
             }
-          } catch (e) {
-            // Cross origin is expected for working embeds, so ignore
-          }
+          } catch (e) {}
         }, 6000);
 
         iframe.onload = function () {
@@ -1549,7 +1508,6 @@
       };
     }
 
-    // Render Past Tests
     var listContainer = document.getElementById('testsListContainer');
     if (listContainer) {
       var tests = (STATE.tests || []).filter(function (t) {
@@ -1557,7 +1515,7 @@
       });
 
       if (tests.length === 0) {
-        listContainer.innerHTML = '<div class="text-sm text-secondary p-12">No test scores recorded yet.</div>';
+        listContainer.innerHTML = '<div class="text-sm text-secondary p-12">No assessment scores recorded yet.</div>';
       } else {
         listContainer.innerHTML = tests.map(function (test) {
           var pct = Math.round((test.marks_obtained / test.total_marks) * 100);
@@ -1572,7 +1530,7 @@
               '</div>' +
               '<div class="test-card-score">' +
                 '<div class="test-score-value">' + test.marks_obtained + ' <span class="text-xs text-muted">/ ' + test.total_marks + '</span></div>' +
-                '<div class="text-xs fw-600" style="color:var(--primary);">' + pct + '% Score</div>' +
+                '<div class="text-xs fw-700" style="color:var(--primary);">' + pct + '% Score</div>' +
               '</div>' +
             '</div>'
           );
@@ -1580,7 +1538,6 @@
       }
     }
 
-    // Render Weak Topics
     var weakContainer = document.getElementById('weakTopicsList');
     if (weakContainer) {
       var allWeak = [];
@@ -1589,19 +1546,15 @@
           allWeak = allWeak.concat(t.weak_topics);
         }
       });
-      // Deduplicate
       var uniqueWeak = allWeak.filter(function (item, pos) { return allWeak.indexOf(item) === pos; });
-      if (uniqueWeak.length === 0) uniqueWeak = ['Snell\'s Law', 'Division Algorithm', 'pH Scale', 'Balancing chemical equations'];
+      if (uniqueWeak.length === 0) uniqueWeak = ['Snell\'s Law', 'Division Algorithm', 'pH Scale Calculations', 'Precipitation Balancing'];
 
       weakContainer.innerHTML = uniqueWeak.map(function (topic) {
         return '<span class="weak-topic-chip">⚠️ ' + topic + '</span>';
       }).join('');
     }
 
-    // Draw Pure SVG Performance Chart
     drawScoresChart();
-
-    // Setup Interactive Practice Quiz
     setupQuizFlow();
   }
 
@@ -1610,20 +1563,19 @@
     if (!chartContainer) return;
 
     var subjects = ['Maths', 'Physics', 'Chemistry', 'Biology', 'English'];
-    var scores = [88, 72, 85, 87, 80]; // realistic averages
+    var scores = [88, 72, 85, 87, 80];
 
-    var svgWidth = 440;
+    var svgWidth = 460;
     var svgHeight = 220;
     var paddingLeft = 45;
     var paddingBottom = 35;
     var chartW = svgWidth - paddingLeft - 20;
     var chartH = svgHeight - paddingBottom - 20;
 
-    var barWidth = 42;
+    var barWidth = 44;
     var barGap = (chartW - (barWidth * subjects.length)) / (subjects.length + 1);
 
     var barsHtml = '';
-    // Y-Axis reference lines (0%, 50%, 100%)
     [0, 50, 100].forEach(function (yVal) {
       var yPos = chartH - (yVal / 100 * chartH) + 15;
       barsHtml +=
@@ -1639,9 +1591,9 @@
       var barColor = score >= 85 ? 'var(--accent)' : score >= 75 ? 'var(--primary)' : 'var(--warning)';
 
       barsHtml +=
-        '<rect x="' + x + '" y="' + y + '" width="' + barWidth + '" height="' + h + '" rx="4" fill="' + barColor + '"/>' +
-        '<text x="' + (x + barWidth / 2) + '" y="' + (y - 5) + '" text-anchor="middle" font-size="10" font-weight="700" fill="var(--text)">' + score + '%</text>' +
-        '<text x="' + (x + barWidth / 2) + '" y="' + (svgHeight - 10) + '" text-anchor="middle" font-size="11" font-weight="500" fill="var(--text-secondary)">' + subj.substring(0, 4) + '</text>';
+        '<rect x="' + x + '" y="' + y + '" width="' + barWidth + '" height="' + h + '" rx="5" fill="' + barColor + '"/>' +
+        '<text x="' + (x + barWidth / 2) + '" y="' + (y - 6) + '" text-anchor="middle" font-size="11" font-weight="800" fill="var(--text-main)">' + score + '%</text>' +
+        '<text x="' + (x + barWidth / 2) + '" y="' + (svgHeight - 10) + '" text-anchor="middle" font-size="11" font-weight="600" fill="var(--text-secondary)">' + subj.substring(0, 4) + '</text>';
     });
 
     chartContainer.innerHTML =
@@ -1682,7 +1634,7 @@
         optContainer.innerHTML = Object.keys(q.options).map(function (key) {
           return (
             '<button type="button" class="quiz-option" data-opt-key="' + key + '">' +
-              '<span class="fw-700" style="width:20px; text-transform:uppercase;">' + key + '.</span> ' +
+              '<span class="fw-800" style="width:22px; text-transform:uppercase;">' + key + '.</span> ' +
               q.options[key] +
             '</button>'
           );
@@ -1702,7 +1654,6 @@
               showToast('Correct answer! 🌟', 'success', 1500);
             } else {
               this.classList.add('wrong');
-              // Highlight the correct one
               var correctBtn = optContainer.querySelector('.quiz-option[data-opt-key="' + q.correct + '"]');
               if (correctBtn) correctBtn.classList.add('correct');
               showToast('Incorrect', 'error', 1500);
@@ -1724,12 +1675,10 @@
         if (activeQuizIndex < mcqs.length - 1) {
           renderQuestion(activeQuizIndex + 1);
         } else {
-          // Finished Quiz
           if (activeView) activeView.style.display = 'none';
           if (resultView) resultView.classList.add('visible');
           if (resultScore) resultScore.textContent = quizScore + ' / ' + mcqs.length;
 
-          // Award quiz completion points
           var ptsAwarded = quizScore * 10 + 10;
           STATE.points += ptsAwarded;
           STATE.points_history.unshift({
@@ -1743,7 +1692,7 @@
 
           Store.set('vs_points', STATE.points);
           Store.set('vs_points_history', STATE.points_history);
-          showToast('Quiz results recorded! (+' + ptsAwarded + ' pts)', 'success', 3500);
+          showToast('Assessment results recorded! (+' + ptsAwarded + ' pts)', 'success', 3500);
         }
       };
     }
@@ -1757,7 +1706,6 @@
       };
     }
 
-    // Initial render
     renderQuestion(0);
   }
 
@@ -1775,7 +1723,6 @@
     if (bigStreak) bigStreak.textContent = STATE.streak + ' Days 🔥';
     if (rankDisp) rankDisp.textContent = '#7';
 
-    // Render Badges
     if (badgesGrid) {
       badgesGrid.innerHTML = (STATE.badges || []).map(function (b) {
         var cls = b.earned ? 'badge-award-card earned' : 'badge-award-card unearned';
@@ -1784,13 +1731,12 @@
             '<div class="badge-award-emoji">' + b.icon_emoji + '</div>' +
             '<div class="badge-award-name">' + b.name + '</div>' +
             '<div class="badge-award-desc">' + b.description + '</div>' +
-            (b.earned ? '<span class="badge badge-accent mt-8" style="font-size:9px;">Earned</span>' : '<span class="badge badge-neutral mt-8" style="font-size:9px;">Locked</span>') +
+            (b.earned ? '<span class="badge badge-accent mt-8" style="font-size:9px;">Unlocked</span>' : '<span class="badge badge-neutral mt-8" style="font-size:9px;">Locked</span>') +
           '</div>'
         );
       }).join('');
     }
 
-    // Render Leaderboard (Top 5 + Self Rank)
     function renderLeaderboard(showSelf) {
       if (!lbList) return;
       var raw = STATE.leaderboard || [];
@@ -1828,7 +1774,6 @@
       };
     }
 
-    // Render Points History List
     if (phList) {
       var history = STATE.points_history || [];
       if (history.length === 0) {
@@ -1837,7 +1782,7 @@
         phList.innerHTML = history.slice(0, 8).map(function (h) {
           return (
             '<div class="ph-item">' +
-              '<div class="ph-icon" style="background:var(--primary-bg); color:var(--primary);">⭐</div>' +
+              '<div class="ph-icon" style="background:var(--primary-subtle); color:var(--primary);">⭐</div>' +
               '<div class="ph-desc">' +
                 '<div>' + h.description + '</div>' +
                 '<div class="ph-date">' + h.date + '</div>' +
@@ -1852,7 +1797,6 @@
 
   // ─── 16. PAGE: MARKSHEETS & CERTIFICATES ───────────────────────────────────
   function generateQrPattern(code) {
-    // Generate deterministic 9x9 boolean matrix from code string
     var hash = 0;
     for (var i = 0; i < code.length; i++) {
       hash = ((hash << 5) - hash) + code.charCodeAt(i);
@@ -1862,7 +1806,6 @@
     var cellsHtml = '';
     for (var r = 0; r < 9; r++) {
       for (var c = 0; c < 9; c++) {
-        // Corner alignment boxes (standard QR markers)
         var isCorner = (r < 3 && c < 3) || (r < 3 && c > 5) || (r > 5 && c < 3);
         var bit = isCorner || (((hash >> ((r * 9 + c) % 31)) & 1) === 1);
         var cellColor = bit ? '#0F172A' : '#FFFFFF';
@@ -1899,7 +1842,7 @@
             '<div class="doc-list-icon">' + iconSvg + '</div>' +
             '<div class="doc-list-info">' +
               '<div class="doc-list-title">' + doc.title + ' ' + statusBadge + '</div>' +
-              '<div class="doc-list-meta">Issued: ' + doc.issue_date + ' &bull; Code: <code>' + doc.code + '</code></div>' +
+              '<div class="doc-list-meta">Issue Date: ' + doc.issue_date + ' &bull; Verification Code: <code>' + doc.code + '</code></div>' +
             '</div>' +
             '<button type="button" class="btn btn-sm btn-primary btn-view-doc" data-doc-id="' + doc.id + '">View &amp; Print</button>' +
           '</div>'
@@ -1923,7 +1866,6 @@
       if (listView) listView.style.display = 'none';
       if (docViewer) docViewer.classList.add('active');
 
-      // Populate document fields
       var examEl = document.getElementById('docRenderExamName');
       var nameEl = document.getElementById('docRenderStudentName');
       var rollEl = document.getElementById('docRenderRoll');
@@ -1944,8 +1886,8 @@
       if (codeEl) codeEl.textContent = doc.code;
       if (statusEl) {
         statusEl.innerHTML = doc.status === 'valid'
-          ? '<span class="badge badge-success">VALID</span>'
-          : '<span class="badge badge-error">REVOKED</span>';
+          ? '<span class="badge badge-success">VALID &amp; AUTHENTIC</span>'
+          : '<span class="badge badge-error">REVOKED RECORD</span>';
       }
 
       if (marksTbody && doc.subject_marks) {
@@ -1953,7 +1895,7 @@
           var sPct = Math.round((sm.obtained / sm.max) * 100);
           return (
             '<tr>' +
-              '<td class="fw-600">' + sm.subject + '</td>' +
+              '<td class="fw-700">' + sm.subject + '</td>' +
               '<td>' + sm.max + '</td>' +
               '<td>' + sm.obtained + '</td>' +
               '<td>' + sPct + '%</td>' +
@@ -2013,27 +1955,27 @@
         var isValid = match.status === 'valid';
         var cardClass = isValid ? 'verify-result-card valid' : 'verify-result-card revoked';
         var statusBadge = isValid
-          ? '<span class="badge badge-success">AUTHENTIC &amp; VALID</span>'
+          ? '<span class="badge badge-success">AUTHENTIC &amp; ACTIVE</span>'
           : '<span class="badge badge-error">REVOKED / CANCELLED</span>';
 
         resContainer.innerHTML =
           '<div class="' + cardClass + '">' +
-            '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">' +
+            '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">' +
               '<div>' +
-                '<span class="text-xs text-muted uppercase">Verification Status</span>' +
-                '<h3 class="text-lg fw-700" style="color:var(--text);">' + match.title + '</h3>' +
+                '<span class="text-xs text-muted uppercase fw-700">Verification Confirmation</span>' +
+                '<h3 class="text-lg fw-800" style="color:var(--text-main); margin-top:2px;">' + match.title + '</h3>' +
               '</div>' +
               statusBadge +
             '</div>' +
             '<table style="width:100%; font-size:var(--text-sm);">' +
-              '<tr><td style="color:var(--text-secondary); width:130px; padding:4px 0;">Issuing Center:</td><td class="fw-600">' + (DATA.center ? DATA.center.name : 'Stellar Academy') + '</td></tr>' +
-              '<tr><td style="color:var(--text-secondary); padding:4px 0;">Candidate Name:</td><td class="fw-600">' + student.name + '</td></tr>' +
+              '<tr><td style="color:var(--text-secondary); width:130px; padding:4px 0;">Issuing Center:</td><td class="fw-700">' + (DATA.center ? DATA.center.name : 'Stellar Academy') + '</td></tr>' +
+              '<tr><td style="color:var(--text-secondary); padding:4px 0;">Candidate Name:</td><td class="fw-700">' + student.name + '</td></tr>' +
               '<tr><td style="color:var(--text-secondary); padding:4px 0;">Examination:</td><td>' + match.exam_name + '</td></tr>' +
-              '<tr><td style="color:var(--text-secondary); padding:4px 0;">Issue Date:</td><td>' + match.issue_date + '</td></tr>' +
+              '<tr><td style="color:var(--text-secondary); padding:4px 0;">Date of Issue:</td><td>' + match.issue_date + '</td></tr>' +
               '<tr><td style="color:var(--text-secondary); padding:4px 0;">Document Code:</td><td><code>' + match.code + '</code></td></tr>' +
             '</table>' +
             '<div class="text-xs text-muted" style="margin-top:14px; border-top:1px solid var(--border); padding-top:8px;">' +
-              'Protected credential lookup &bull; No sensitive marks or personal contact data exposed.' +
+              'Protected credential lookup &bull; No sensitive contact details exposed.' +
             '</div>' +
           '</div>';
 
@@ -2041,9 +1983,9 @@
       } else {
         resContainer.innerHTML =
           '<div class="card text-center p-24" style="border-color:var(--error);">' +
-            '<div style="font-size:2rem; margin-bottom:8px;">❌</div>' +
+            '<div style="font-size:36px; margin-bottom:8px;">❌</div>' +
             '<h3 class="text-base fw-700" style="color:var(--error);">Document Record Not Found</h3>' +
-            '<p class="text-sm text-secondary">The verification code <code>' + trimmed + '</code> does not match any certificate issued by our center.</p>' +
+            '<p class="text-sm text-secondary">The verification code <code>' + trimmed + '</code> does not correspond to any issued credential in our registry.</p>' +
           '</div>';
         showToast('Document code not found in registry', 'error', 3000);
       }
@@ -2056,7 +1998,6 @@
       };
     }
 
-    // Auto-verify if code passed in URL
     if (presetCode) {
       if (input) input.value = presetCode;
       executeVerification(presetCode);
@@ -2090,9 +2031,9 @@
 
     if (resetBtn) {
       resetBtn.onclick = function () {
-        if (confirm('Are you sure you want to reset all prototype demo data?\nAll marked attendance, payments, test scores, and notes will return to initial state.')) {
+        if (confirm('Are you sure you want to reset all prototype demo data?\nAll recorded fee settlements, attendance check-ins, and study notes will revert to fresh defaults.')) {
           Store.reset();
-          showToast('Demo data successfully restored to defaults!', 'info', 2000);
+          showToast('Demo data restored to initial state!', 'info', 2000);
           setTimeout(function () {
             window.location.reload();
           }, 600);
@@ -2106,7 +2047,6 @@
     initState();
     applyTheme(STATE.theme);
 
-    // Navbar Hamburger toggle
     var hamburger = document.getElementById('hamburger');
     var mobileMenu = document.getElementById('mobileMenu');
     if (hamburger && mobileMenu) {
@@ -2116,26 +2056,20 @@
       });
     }
 
-    // Navbar Theme Button toggle
     var themeToggleBtn = document.getElementById('themeToggle');
     if (themeToggleBtn) {
       themeToggleBtn.addEventListener('click', toggleTheme);
     }
 
-    // Mode Toggle (Student vs Parent)
     var modeToggleBtn = document.getElementById('modeToggle');
     if (modeToggleBtn) {
       modeToggleBtn.addEventListener('click', toggleParentMode);
     }
 
-    // Listen for hash changes
     window.addEventListener('hashchange', handleRouting);
-
-    // Initial Route Execution
     handleRouting();
   }
 
-  // DOM Ready
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initApp);
   } else {

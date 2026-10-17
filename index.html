@@ -1,1094 +1,134 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Vilarci Study - Premium student & parent learning portal prototype for coaching centers and tuition.">
-  <title>Vilarci Study – Student &amp; Parent Portal</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="https://officialpic.vilarci.in/Icons/web-icon.png" type="image/x-icon">
+    <title>Vilarci Study</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --paper: #eef1f7;
+            --ink: #1b2250;
+            --ink-soft: #4c5380;
+            --marigold: #f2a900;
+            --sky: #9db4ff;
+            --card: #ffffff;
+            --line: #d3d9ea;
+            color-scheme: light;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --paper: #141838;
+                --ink: #eef1ff;
+                --ink-soft: #aab2e0;
+                --card: #1d2352;
+                --line: #333b7a;
+                color-scheme: dark;
+            }
+        }
+        * { box-sizing: border-box; margin: 0; }
+        html, body { min-height: 100%; }
+        body {
+            font-family: "Bricolage Grotesque", system-ui, -apple-system, "Segoe UI", sans-serif;
+            background: var(--paper);
+            color: var(--ink);
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+        }
+        main {
+            max-width: 1040px;
+            margin: 0 auto;
+            padding: clamp(32px, 7vw, 88px) clamp(20px, 4vw, 40px);
+        }
+        header { max-width: 36rem; margin-bottom: clamp(32px, 6vw, 64px); }
+        .brand { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; font-weight: 600; }
+        .brand img { width: 36px; height: 36px; border-radius: 10px; }
+        h1 {
+            font-size: clamp(2.6rem, 8vw, 5rem);
+            font-weight: 800;
+            line-height: 0.98;
+            letter-spacing: -0.03em;
+        }
+        header p { margin-top: 20px; color: var(--ink-soft); font-size: 1.1rem; max-width: 30rem; }
 
-  <!-- Google Font: Inter -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+        .choices { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        @media (max-width: 720px) { .choices { grid-template-columns: 1fr; } }
 
-  <!-- Core CSS -->
-  <link rel="stylesheet" href="styles.css">
+        .choice {
+            display: flex; flex-direction: column;
+            background: var(--card);
+            border: 2px solid var(--line);
+            border-radius: 28px;
+            overflow: hidden;
+            color: inherit; text-decoration: none;
+            transition: border-color .2s, transform .2s;
+        }
+        .choice:hover { border-color: var(--ink); transform: translateY(-4px); }
+        .choice:focus-visible { outline: 3px solid var(--marigold); outline-offset: 4px; }
 
-  <!-- Inline SVG Favicon -->
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%234F46E5'><path d='M12 3L1 9l4 2.18v6L12 21l7-3.82v-6l2-1.09V17h2V9L12 3zm6.82 6L12 12.72 5.18 9 12 5.28 18.82 9zM17 15.99l-5 2.73-5-2.73v-3.72L12 15l5-2.73v3.72z'/></svg>">
+        .preview {
+            height: 240px; position: relative; overflow: hidden;
+            background: var(--line);
+            border-bottom: 2px solid var(--line);
+        }
+        .preview iframe {
+            position: absolute; top: 0; left: 0;
+            width: 400%; height: 400%;
+            border: 0; background: #fff;
+            transform: scale(0.25); transform-origin: top left;
+            pointer-events: none;
+        }
+
+        .body { padding: 24px 26px 28px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+        .body h2 { font-size: 1.6rem; font-weight: 800; letter-spacing: -0.02em; }
+        .body p { color: var(--ink-soft); }
+        .open {
+            margin-top: 14px; align-self: flex-start;
+            padding: 10px 20px; border-radius: 999px;
+            background: var(--ink); color: var(--paper);
+            font-weight: 600; font-size: .95rem;
+            transition: background .2s, color .2s;
+        }
+        .choice:hover .open { background: var(--marigold); color: #1b2250; }
+    </style>
 </head>
 <body>
-
-  <!-- ===== TOP NAVIGATION BAR ===== -->
-  <nav id="navbar" class="navbar" role="navigation" aria-label="Main navigation">
-    <div class="nav-container">
-      <a href="#home" class="nav-brand" aria-label="Vilarci Study Home">
-        <div class="nav-brand-icon" aria-hidden="true">VS</div>
-        <div>
-          <span class="brand-name">Vilarci Study</span>
-          <span class="brand-sub">by Stellar Academy</span>
-        </div>
-      </a>
-
-      <!-- Desktop Nav Links -->
-      <div class="nav-links" role="menubar" id="desktopNavLinks">
-        <a href="#home" class="nav-link active" role="menuitem" data-route="home">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-          Dashboard
-        </a>
-        <a href="#attendance" class="nav-link" role="menuitem" data-route="attendance">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
-          Attendance
-        </a>
-        <a href="#fees" class="nav-link" role="menuitem" data-route="fees">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
-          Fees
-        </a>
-        <a href="#timetable" class="nav-link" role="menuitem" data-route="timetable">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><polyline points="10 6 14 10 10 14"/></svg>
-          Timetable
-        </a>
-        <a href="#focus" class="nav-link" role="menuitem" data-route="focus">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-          Focus
-        </a>
-        <a href="#labs" class="nav-link" role="menuitem" data-route="labs">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a1 1 0 0 0 .9 1.45h12.76a1 1 0 0 0 .9-1.45l-5.069-10.127A2 2 0 0 1 14 9.527V2"/><path d="M8.5 2h7"/><path d="M7 16h10"/></svg>
-          Labs
-        </a>
-        <a href="#videos" class="nav-link" role="menuitem" data-route="videos">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect width="15" height="14" x="1" y="5" rx="2" ry="2"/></svg>
-          Videos
-        </a>
-        <a href="#tests" class="nav-link" role="menuitem" data-route="tests">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="m9 14 2 2 4-4"/></svg>
-          Tests
-        </a>
-        <a href="#points" class="nav-link" role="menuitem" data-route="points">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-          Points
-        </a>
-        <a href="#marksheet" class="nav-link" role="menuitem" data-route="marksheet">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
-          Documents
-        </a>
-        <a href="#verify" class="nav-link" role="menuitem" data-route="verify">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
-          Verify
-        </a>
-        <a href="#settings" class="nav-link" role="menuitem" data-route="settings">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
-          Settings
-        </a>
-      </div>
-
-      <!-- Actions -->
-      <div class="nav-actions">
-        <!-- Parent / Student mode toggle -->
-        <button type="button" class="mode-toggle" id="modeToggle" aria-label="Toggle between Student and Parent view" title="Switch Student / Parent mode">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-          <span id="modeToggleLabel">Student</span>
-        </button>
-
-        <!-- Dark mode toggle -->
-        <button type="button" class="btn-icon theme-toggle" id="themeToggle" aria-label="Toggle dark mode" title="Toggle dark mode">
-          <svg id="themeIconSun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
-          <svg id="themeIconMoon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
-        </button>
-
-        <!-- Hamburger for mobile -->
-        <button type="button" class="hamburger" id="hamburger" aria-label="Toggle menu" aria-expanded="false" aria-controls="mobileMenu">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
-        </button>
-      </div>
-    </div>
-
-    <!-- Mobile Slide-down Menu -->
-    <div class="nav-mobile-menu" id="mobileMenu" aria-hidden="true">
-      <a href="#home" class="nav-mobile-link" data-route="home">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-        Dashboard
-      </a>
-      <a href="#attendance" class="nav-mobile-link" data-route="attendance">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
-        Attendance
-      </a>
-      <a href="#fees" class="nav-mobile-link" data-route="fees">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
-        Fees &amp; Payments
-      </a>
-      <a href="#timetable" class="nav-mobile-link" data-route="timetable">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><polyline points="10 6 14 10 10 14"/></svg>
-        Timetable &amp; Syllabus
-      </a>
-      <a href="#focus" class="nav-mobile-link" data-route="focus">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-        Focus Study
-      </a>
-      <a href="#labs" class="nav-mobile-link" data-route="labs">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a1 1 0 0 0 .9 1.45h12.76a1 1 0 0 0 .9-1.45l-5.069-10.127A2 2 0 0 1 14 9.527V2"/><path d="M8.5 2h7"/><path d="M7 16h10"/></svg>
-        Labs &amp; Simulations
-      </a>
-      <a href="#videos" class="nav-mobile-link" data-route="videos">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect width="15" height="14" x="1" y="5" rx="2" ry="2"/></svg>
-        Video Lessons
-      </a>
-      <a href="#tests" class="nav-mobile-link" data-route="tests">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="m9 14 2 2 4-4"/></svg>
-        Tests &amp; Scores
-      </a>
-      <a href="#points" class="nav-mobile-link" data-route="points">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-        Points &amp; Rewards
-      </a>
-      <a href="#marksheet" class="nav-mobile-link" data-route="marksheet">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
-        Marksheets &amp; Certificates
-      </a>
-      <a href="#verify" class="nav-mobile-link" data-route="verify">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
-        Verify Document
-      </a>
-      <a href="#settings" class="nav-mobile-link" data-route="settings">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
-        Settings
-      </a>
-    </div>
-  </nav>
-
-  <!-- ===== TOAST CONTAINER ===== -->
-  <div id="toastContainer" class="toast-container" aria-live="polite" aria-atomic="true"></div>
-
-  <!-- ===== MODAL CONTAINER ===== -->
-  <div id="modalContainer"></div>
-
-  <!-- ===== MAIN CONTENT VIEWS ===== -->
-  <main id="mainContent" class="main-content" role="main">
-
-    <!-- 1. VIEW: DASHBOARD / HOME -->
-    <section id="view-home" class="view active" aria-labelledby="homeTitle">
-      <div class="view-container">
-        <!-- Parent Banner (visible only in parent mode) -->
-        <div id="parentBanner" class="parent-banner" style="display:none;">
-          <span class="badge badge-primary">Parent Portal</span>
-          <span class="parent-banner-label" id="parentBannerText">Viewing academic progress for your children</span>
-          <div style="display:flex; gap:8px; align-items:center;">
-            <label for="childSelect" class="text-xs fw-600">Select child:</label>
-            <select id="childSelect" class="form-input" style="width:auto; padding:4px 8px; font-size:12px;">
-              <!-- Populated by JS -->
-            </select>
-          </div>
-        </div>
-
-        <!-- Student Header -->
-        <div class="page-header" id="studentHeader">
-          <h1 id="homeGreeting">Welcome back, Aryan!</h1>
-          <p id="homeDateSubtitle">Here is your daily learning overview for today.</p>
-        </div>
-
-        <!-- Stats Grid (4 cards) -->
-        <div class="stats-grid" id="homeStatsGrid">
-          <!-- Card 1: Attendance % -->
-          <div class="stat-card">
-            <div class="stat-card-icon accent">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+    <main>
+        <header>
+            <div class="brand">
+                <img src="https://officialpic.vilarci.in/Icons/web-icon.png" alt="">
+                <span>Vilarci</span>
             </div>
-            <div class="stat-card-value" id="homeAttPct">88%</div>
-            <div class="stat-card-label">Attendance This Month</div>
-            <div class="progress-bar-track">
-              <div class="progress-bar-fill accent" id="homeAttBar" style="width: 88%;"></div>
-            </div>
-          </div>
+            <h1>Vilarci Study</h1>
+            <p>Two versions of the study experience are ready. Pick one to open it.</p>
+        </header>
 
-          <!-- Card 2: Fee Status -->
-          <div class="stat-card">
-            <div class="stat-card-icon warning">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
-            </div>
-            <div class="stat-card-value" id="homeFeeStatus">₹3,500</div>
-            <div class="stat-card-label" id="homeFeeLabel">November Due</div>
-            <div style="margin-top: 8px;">
-              <span class="badge badge-warning" id="homeFeeBadge">Due Nov 5</span>
-            </div>
-          </div>
-
-          <!-- Card 3: Study Streak -->
-          <div class="stat-card">
-            <div class="stat-card-icon primary">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
-            </div>
-            <div class="stat-card-value" id="homeStreak">12 Days</div>
-            <div class="stat-card-label">Study Streak</div>
-            <div style="margin-top: 8px;">
-              <span class="badge badge-accent">🔥 On fire!</span>
-            </div>
-          </div>
-
-          <!-- Card 4: Total Points -->
-          <div class="stat-card">
-            <div class="stat-card-icon info">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-            </div>
-            <div class="stat-card-value" id="homePoints">1,240</div>
-            <div class="stat-card-label">Reward Points</div>
-            <div style="margin-top: 8px;">
-              <span class="badge badge-primary">Rank #7 in Batch</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Dashboard Content Grid -->
-        <div class="dashboard-grid" id="homeDashboardGrid">
-          <!-- Left Column -->
-          <div style="display:flex; flex-direction:column; gap:16px;">
-            <!-- Today's Schedule Card -->
-            <div class="card">
-              <div class="card-header">
-                <h2 class="card-title">Today's Classes</h2>
-                <span class="badge badge-neutral" id="homeTodayDayBadge">Today</span>
-              </div>
-              <div class="card-body">
-                <div class="classes-list" id="homeClassesList">
-                  <!-- Injected by JS -->
+        <div class="choices">
+            <a class="choice" href="./Vilarci-Study-demo/Anitigravity/index.html">
+                <div class="preview" aria-hidden="true">
+                    <iframe src="https://krishnendu-kar.github.io/vilarci-study-website/Vilarci-Study-demo/Anitigravity" title="" tabindex="-1" loading="lazy"></iframe>
                 </div>
-              </div>
-            </div>
-
-            <!-- Next Scheduled Test Card -->
-            <div class="card">
-              <div class="card-header">
-                <h2 class="card-title">Upcoming Assessment</h2>
-                <a href="#tests" class="text-sm fw-600">All tests &rarr;</a>
-              </div>
-              <div class="card-body" id="homeNextTestContainer">
-                <!-- Injected by JS -->
-              </div>
-            </div>
-          </div>
-
-          <!-- Right Column: Progress Rings -->
-          <div class="card">
-            <div class="card-header">
-              <h2 class="card-title">Syllabus Progress</h2>
-              <a href="#timetable" class="text-sm fw-600">Track &rarr;</a>
-            </div>
-            <div class="card-body">
-              <p class="text-xs text-secondary mb-16">Subject-wise chapter completion tracker</p>
-              <div class="subject-rings-grid" id="homeSubjectRings">
-                <!-- Rings drawn by JS -->
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Parent View: Children comparison (Shown only in parent mode) -->
-        <div id="homeParentChildrenView" class="parent-children-grid">
-          <!-- Injected by JS when in parent mode -->
-        </div>
-      </div>
-    </section>
-
-    <!-- 2. VIEW: ATTENDANCE -->
-    <section id="view-attendance" class="view" aria-labelledby="attTitle">
-      <div class="view-container">
-        <div class="page-header">
-          <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px;">
-            <div>
-              <h1 id="attTitle">Attendance Log</h1>
-              <p>Monthly calendar log, subject percentages, and instant QR verification simulation.</p>
-            </div>
-            <!-- Quick action button: simulate QR check-in -->
-            <button type="button" class="btn btn-accent" id="btnQrScan">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
-              Simulate QR Check-In
-            </button>
-          </div>
-        </div>
-
-        <div class="dashboard-grid">
-          <!-- Calendar Card -->
-          <div class="card">
-            <div class="card-header">
-              <div class="calendar-controls">
-                <button type="button" class="calendar-nav-btn" id="calPrevMonth" aria-label="Previous Month">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
-                </button>
-                <span class="calendar-month-label" id="calMonthLabel">October 2025</span>
-                <button type="button" class="calendar-nav-btn" id="calNextMonth" aria-label="Next Month">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
-                </button>
-              </div>
-              <span class="badge badge-primary" id="calSummaryBadge">90% Present</span>
-            </div>
-            <div class="card-body">
-              <div class="calendar-grid" id="attendanceCalendarGrid">
-                <!-- Days generated by JS -->
-              </div>
-              <!-- Legend -->
-              <div class="attendance-legend">
-                <div class="legend-item"><span class="legend-dot present"></span> Present</div>
-                <div class="legend-item"><span class="legend-dot late"></span> Late</div>
-                <div class="legend-item"><span class="legend-dot absent"></span> Absent</div>
-                <div class="legend-item"><span class="legend-dot noclass"></span> No Class / Sunday</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Subject wise attendance & month overview -->
-          <div style="display:flex; flex-direction:column; gap:16px;">
-            <div class="card">
-              <div class="card-header">
-                <h2 class="card-title">Subject Breakdown</h2>
-                <span class="text-xs text-muted">Term aggregate</span>
-              </div>
-              <div class="card-body">
-                <div class="subject-attendance-grid" id="subjectAttList">
-                  <!-- Injected by JS -->
+                <div class="body">
+                    <h2>Antigravity Style</h2>
+                    <p>Light, floating layout with soft motion.</p>
+                    <span class="open">Open this version</span>
                 </div>
-              </div>
-            </div>
-
-            <!-- Monthly Stats Summary -->
-            <div class="card">
-              <div class="card-body" id="attendanceSummaryMetrics">
-                <!-- Injected by JS -->
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- 3. VIEW: FEES & PAYMENTS -->
-    <section id="view-fees" class="view" aria-labelledby="feesTitle">
-      <div class="view-container">
-        <div class="page-header">
-          <h1 id="feesTitle">Fees &amp; Invoices</h1>
-          <p>Coaching fee ledger, receipt archive, and simulated payment gateway.</p>
-        </div>
-
-        <!-- Ledger cards / pending summary banner -->
-        <div class="card mb-24" style="background: linear-gradient(135deg, var(--surface), var(--surface-2));">
-          <div class="card-body" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px;">
-            <div>
-              <div class="text-xs text-secondary fw-600 uppercase">Current Pending Dues</div>
-              <div class="text-3xl fw-700" id="feesPendingAmount" style="color:var(--error);">₹3,500</div>
-              <div class="text-sm text-muted" id="feesPendingNotice">Due for November 2025 by Nov 5, 2025</div>
-            </div>
-            <div>
-              <button type="button" class="btn btn-primary btn-lg" id="btnPayPending">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
-                Pay Outstanding Fees
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Ledger Table -->
-        <div class="card">
-          <div class="card-header">
-            <h2 class="card-title">Fee Ledger</h2>
-            <span class="badge badge-info">Simulated Mode</span>
-          </div>
-          <div class="card-body" style="padding:0;">
-            <div class="table-wrapper" style="border:none;">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Month</th>
-                    <th>Due Date</th>
-                    <th>Amount</th>
-                    <th>Status</th>
-                    <th>Payment Mode</th>
-                    <th>Receipt No.</th>
-                    <th style="text-align:right;">Action</th>
-                  </tr>
-                </thead>
-                <tbody id="feesTableBody">
-                  <!-- Populated by JS -->
-                </tbody>
-              </table>
-            </div>
-          </div>
-          <div class="card-body" style="border-top: 1px solid var(--border);">
-            <p class="text-xs text-muted">Notice: All online transactions and UPI confirmations in this prototype are simulated. No real currency is transferred or charged.</p>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- 4. VIEW: TIMETABLE & SYLLABUS -->
-    <section id="view-timetable" class="view" aria-labelledby="ttTitle">
-      <div class="view-container">
-        <div class="page-header">
-          <h1 id="ttTitle">Timetable &amp; Syllabus Tracker</h1>
-          <p>Weekly batch schedule alongside date-wise topic completion and self-revision checkmarks.</p>
-        </div>
-
-        <!-- Tabs -->
-        <div class="tabs">
-          <div class="tab-list" role="tablist">
-            <button type="button" class="tab-btn active" role="tab" id="tabBtnTimetable" aria-selected="true" aria-controls="panelTimetable">Weekly Schedule</button>
-            <button type="button" class="tab-btn" role="tab" id="tabBtnSyllabus" aria-selected="false" aria-controls="panelSyllabus">Syllabus Progress Tracker</button>
-          </div>
-
-          <!-- Panel 1: Timetable -->
-          <div class="tab-panel active" id="panelTimetable" role="tabpanel">
-            <div class="timetable-grid">
-              <table class="tt-grid-table">
-                <thead>
-                  <tr>
-                    <th>Time</th>
-                    <th>Monday</th>
-                    <th>Tuesday</th>
-                    <th>Wednesday</th>
-                    <th>Thursday</th>
-                    <th>Friday</th>
-                    <th>Saturday</th>
-                  </tr>
-                </thead>
-                <tbody id="timetableGridBody">
-                  <!-- Populated by JS -->
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <!-- Panel 2: Syllabus Tracker -->
-          <div class="tab-panel" id="panelSyllabus" role="tabpanel">
-            <div class="filter-chips" id="syllabusSubjectFilter">
-              <button type="button" class="chip active" data-subject="all">All Subjects</button>
-              <button type="button" class="chip" data-subject="Maths">Maths</button>
-              <button type="button" class="chip" data-subject="Physics">Physics</button>
-              <button type="button" class="chip" data-subject="Chemistry">Chemistry</button>
-              <button type="button" class="chip" data-subject="Biology">Biology</button>
-              <button type="button" class="chip" data-subject="English">English</button>
-            </div>
-
-            <div id="syllabusContainer">
-              <!-- Rendered by JS -->
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- 5. VIEW: FOCUS STUDY -->
-    <section id="view-focus" class="view" aria-labelledby="focusTitle">
-      <div class="view-container">
-        <div class="page-header">
-          <h1 id="focusTitle">Distraction-Free Focus Study</h1>
-          <p>Clean educational video player with custom focus timer, autosaved per-video lecture notes, and no algorithmic feeds.</p>
-        </div>
-
-        <!-- URL Input card -->
-        <div class="focus-url-section">
-          <label for="focusUrlInput" class="form-label">Paste YouTube Video or Shorts URL:</label>
-          <form id="focusUrlForm" class="focus-url-form" onsubmit="return false;">
-            <div class="focus-url-input-wrap">
-              <input type="url" id="focusUrlInput" class="form-input" placeholder="e.g. https://www.youtube.com/watch?v=IWigcMGGMIs or youtu.be/...">
-              <span class="form-error" id="focusUrlError">Please enter a valid YouTube video link (watch, youtu.be or shorts).</span>
-            </div>
-            <button type="submit" class="btn btn-primary" id="btnLoadFocusVideo">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-              Start Focus Session
-            </button>
-            <button type="button" class="btn btn-secondary" id="btnFocusSampleVideo">Load Sample Lesson</button>
-          </form>
-        </div>
-
-        <!-- Main Focus Layout (shown once video loaded) -->
-        <div class="focus-layout" id="focusMainLayout">
-          <!-- Video Column -->
-          <div class="focus-video-col">
-            <div class="card mb-16" style="padding:0; overflow:hidden;">
-              <div class="video-responsive">
-                <iframe id="focusVideoIframe" src="" title="Focus Study Player" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-              </div>
-            </div>
-
-            <!-- Topic link action -->
-            <div class="card">
-              <div class="card-body" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
-                <div>
-                  <h3 class="text-sm fw-600 mb-4">Finished watching this topic?</h3>
-                  <p class="text-xs text-muted">Update your syllabus tracker and claim study points.</p>
-                </div>
-                <button type="button" class="btn btn-accent" id="btnFocusMarkTopicDone">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
-                  Mark Topic Done (+20 pts)
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Sidebar Column: Timer & Notes -->
-          <div class="focus-sidebar-col">
-            <!-- Focus Countdown Timer -->
-            <div class="focus-timer-card">
-              <div class="text-xs text-secondary fw-600 uppercase text-center">Focus Timer</div>
-              <div class="timer-display" id="focusTimerDisplay">25:00</div>
-
-              <div class="timer-presets">
-                <button type="button" class="timer-preset-btn selected" data-mins="25">25m</button>
-                <button type="button" class="timer-preset-btn" data-mins="45">45m</button>
-                <button type="button" class="timer-preset-btn" data-mins="60">60m</button>
-              </div>
-
-              <div class="timer-custom-row">
-                <label for="customTimerMin" class="text-xs text-secondary">Custom:</label>
-                <input type="number" id="customTimerMin" min="1" max="180" placeholder="min" class="form-input">
-                <button type="button" class="btn btn-sm btn-secondary" id="btnApplyCustomTimer">Set</button>
-              </div>
-
-              <div class="timer-controls">
-                <button type="button" class="btn btn-primary" id="btnStartPauseTimer">Start Timer</button>
-                <button type="button" class="btn btn-secondary" id="btnResetTimer">Reset</button>
-              </div>
-
-              <div class="timer-complete-msg" id="timerCompleteMsg">
-                🎉 Great job! Session finished. +50 Study Points awarded!
-              </div>
-            </div>
-
-            <!-- Video Notes (Autosaved) -->
-            <div class="focus-notes-card">
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                <label for="focusNotesArea" class="text-xs fw-600 uppercase text-secondary">Lesson Notes</label>
-                <span class="notes-saved-indicator" id="notesSavedIndicator">Autosaved</span>
-              </div>
-              <textarea id="focusNotesArea" class="form-input" style="height:180px;" placeholder="Take notes while studying. Changes save automatically per video..."></textarea>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- 6. VIEW: LABS & SIMULATIONS -->
-    <section id="view-labs" class="view" aria-labelledby="labsTitle">
-      <div class="view-container">
-        <div class="page-header">
-          <h1 id="labsTitle">Interactive STEM Labs</h1>
-          <p>Embedded science simulations with real-time controls, experiments, and fallback links.</p>
-        </div>
-
-        <!-- Filter chips -->
-        <div class="filter-chips" id="labsSubjectFilter">
-          <button type="button" class="chip active" data-subject="all">All Subjects</button>
-          <button type="button" class="chip" data-subject="Physics">Physics</button>
-          <button type="button" class="chip" data-subject="Chemistry">Chemistry</button>
-          <button type="button" class="chip" data-subject="Biology">Biology</button>
-        </div>
-
-        <!-- Simulation Grid -->
-        <div class="sim-grid" id="simGrid">
-          <!-- Populated by JS -->
-        </div>
-
-        <!-- Simulation Full Viewer (modal-like container) -->
-        <div class="sim-viewer" id="simViewer">
-          <div class="sim-viewer-header">
-            <button type="button" class="btn btn-secondary" id="btnBackFromSim">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
-              Back to Labs
-            </button>
-            <h2 class="text-lg fw-600" id="simViewerTitle">Simulation Viewer</h2>
-            <a href="#" target="_blank" rel="noopener" class="btn btn-sm btn-ghost" id="simExternalLink" style="margin-left:auto;">
-              Open in Full Tab ↗
             </a>
-          </div>
 
-          <div class="sim-iframe-wrapper">
-            <iframe id="simIframe" src="" title="Interactive Simulation" allowfullscreen></iframe>
-            <!-- Fallback if iframe fails to load -->
-            <div class="sim-fallback" id="simFallback">
-              <div style="font-size:2.5rem;">⚠️</div>
-              <h3 class="text-base fw-600">Simulation Couldn't Load Inside Iframe</h3>
-              <p class="text-sm text-secondary">PhET simulation servers might restrict embedding on some networks or browser configurations.</p>
-              <a href="#" target="_blank" rel="noopener" class="btn btn-primary" id="simFallbackBtn">Open Simulation in New Tab</a>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- 7. VIEW: VIDEOS LIBRARY -->
-    <section id="view-videos" class="view" aria-labelledby="videosTitle">
-      <div class="view-container">
-        <div class="page-header">
-          <h1 id="videosTitle">Curated Video Library</h1>
-          <p>Teacher-recommended lessons by chapter, embedded without YouTube trackers or algorithmic distractions.</p>
-        </div>
-
-        <!-- Filter chips -->
-        <div class="filter-chips" id="videoSubjectFilter">
-          <button type="button" class="chip active" data-subject="all">All Subjects</button>
-          <button type="button" class="chip" data-subject="Maths">Maths</button>
-          <button type="button" class="chip" data-subject="Physics">Physics</button>
-          <button type="button" class="chip" data-subject="Chemistry">Chemistry</button>
-          <button type="button" class="chip" data-subject="Biology">Biology</button>
-          <button type="button" class="chip" data-subject="English">English</button>
-        </div>
-
-        <!-- Inline Player Container (appears when video is clicked) -->
-        <div id="videoActivePlayerContainer" class="mb-24" style="display:none;">
-          <div class="card">
-            <div class="card-header">
-              <h2 class="card-title" id="videoActiveTitle">Video Title</h2>
-              <button type="button" class="btn-icon" id="btnCloseActiveVideo" title="Close video player">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-              </button>
-            </div>
-            <div class="video-responsive">
-              <iframe id="videoActiveIframe" src="" title="Video Player" allowfullscreen></iframe>
-            </div>
-          </div>
-        </div>
-
-        <!-- Video Cards Grid -->
-        <div class="sim-grid" id="videoCardsGrid">
-          <!-- Populated by JS -->
-        </div>
-      </div>
-    </section>
-
-    <!-- 8. VIEW: TESTS & SCORES -->
-    <section id="view-tests" class="view" aria-labelledby="testsTitle">
-      <div class="view-container">
-        <div class="page-header">
-          <h1 id="testsTitle">Tests &amp; Assessments</h1>
-          <p>Score reports, performance trends chart, weak-topic diagnostics, and practice MCQ quizzes.</p>
-        </div>
-
-        <!-- Tabs -->
-        <div class="tabs">
-          <div class="tab-list" role="tablist">
-            <button type="button" class="tab-btn active" role="tab" id="tabBtnTestReports" aria-selected="true" aria-controls="panelTestReports">Score Reports &amp; Analytics</button>
-            <button type="button" class="tab-btn" role="tab" id="tabBtnTakeQuiz" aria-selected="false" aria-controls="panelTakeQuiz">Take Practice Quiz (5 MCQs)</button>
-          </div>
-
-          <!-- Panel 1: Reports & Performance -->
-          <div class="tab-panel active" id="panelTestReports" role="tabpanel">
-            <div class="dashboard-grid">
-              <!-- Left: Test List -->
-              <div style="display:flex; flex-direction:column; gap:16px;">
-                <div class="card">
-                  <div class="card-header">
-                    <h2 class="card-title">Past Test Records</h2>
-                    <span class="badge badge-accent">Class 10 Batch</span>
-                  </div>
-                  <div class="card-body">
-                    <div class="tests-list" id="testsListContainer">
-                      <!-- Populated by JS -->
-                    </div>
-                  </div>
+            <a class="choice" href="./Vilarci-Study-demo/Replit/index.html">
+                <div class="preview" aria-hidden="true">
+                    <iframe src="https://vilarci-study-demo-portal--locaalrapid.replit.app/" title="" tabindex="-1" loading="lazy"></iframe>
                 </div>
-
-                <!-- Weak Topics Card -->
-                <div class="card">
-                  <div class="card-header">
-                    <h2 class="card-title">Topics Requiring Revision</h2>
-                    <span class="badge badge-error">Needs Attention</span>
-                  </div>
-                  <div class="weak-topics-list" id="weakTopicsList">
-                    <!-- Populated by JS -->
-                  </div>
+                <div class="body">
+                    <h2>Replit Version</h2>
+                    <p>Structured, panel-based layout with a clear grid.</p>
+                    <span class="open">Open this version</span>
                 </div>
-              </div>
-
-              <!-- Right: Performance Chart -->
-              <div class="card">
-                <div class="card-header">
-                  <h2 class="card-title">Subject Score Averages</h2>
-                  <span class="text-xs text-muted">Pure SVG Bar Graph</span>
-                </div>
-                <div class="card-body">
-                  <div class="chart-container" id="chartContainer">
-                    <!-- SVG Chart injected by JS -->
-                  </div>
-                  <div class="mt-16 text-xs text-muted text-center">
-                    Percentages aggregated from Unit Tests and Mid Term examinations.
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Panel 2: Interactive Quiz Flow -->
-          <div class="tab-panel" id="panelTakeQuiz" role="tabpanel">
-            <div class="quiz-container" style="max-width:680px; margin:0 auto;">
-              <!-- Active Question View -->
-              <div id="quizActiveView">
-                <div class="quiz-question-num" id="quizQuestionNum">Question 1 of 5</div>
-                <div class="quiz-progress-bar">
-                  <div class="quiz-progress-fill" id="quizProgressBar" style="width: 20%;"></div>
-                </div>
-
-                <div class="badge badge-primary mb-12" id="quizSubjectBadge">Maths</div>
-                <div class="quiz-question" id="quizQuestionText">Loading question...</div>
-
-                <div class="quiz-options" id="quizOptionsContainer">
-                  <!-- Populated by JS -->
-                </div>
-
-                <div class="quiz-explanation" id="quizExplanation">
-                  <!-- Injected upon answer selection -->
-                </div>
-
-                <div style="display:flex; justify-content:flex-end;">
-                  <button type="button" class="btn btn-primary" id="btnNextQuizQuestion" disabled>Next Question &rarr;</button>
-                </div>
-              </div>
-
-              <!-- Quiz Results View -->
-              <div class="quiz-result" id="quizResultView">
-                <div style="font-size:3rem;">🎯</div>
-                <h2 class="text-2xl fw-700">Quiz Completed!</h2>
-                <div class="quiz-result-score" id="quizResultScore">4 / 5</div>
-                <p class="quiz-result-msg" id="quizResultMsg">Outstanding performance! Keep up the brilliant effort.</p>
-                <div style="display:flex; gap:12px; justify-content:center;">
-                  <button type="button" class="btn btn-primary" id="btnRestartQuiz">Retake Quiz</button>
-                  <a href="#points" class="btn btn-secondary">View Points Earned</a>
-                </div>
-              </div>
-            </div>
-          </div>
+            </a>
         </div>
-      </div>
-    </section>
-
-    <!-- 9. VIEW: POINTS & REWARDS -->
-    <section id="view-points" class="view" aria-labelledby="pointsTitle">
-      <div class="view-container">
-        <div class="page-header">
-          <h1 id="pointsTitle">Study Points &amp; Achievements</h1>
-          <p>Gamified learning incentives, badges, points ledger, and opt-in batch leaderboard.</p>
-        </div>
-
-        <!-- Banner Summary -->
-        <div class="points-summary-card">
-          <div>
-            <div class="points-summary-value" id="pointsBigTotal">1,240</div>
-            <div class="points-summary-label">Total Points Earned</div>
-          </div>
-          <div>
-            <div class="points-summary-value" id="pointsBigStreak">12 Days 🔥</div>
-            <div class="points-summary-label">Active Learning Streak</div>
-          </div>
-          <div style="margin-left:auto;">
-            <div class="points-summary-value" id="pointsRankDisplay">#7</div>
-            <div class="points-summary-label">Batch Leaderboard Rank</div>
-          </div>
-        </div>
-
-        <!-- Badges Section -->
-        <h2 class="text-lg fw-700 mb-12">Earned Badges &amp; Trophies</h2>
-        <div class="badge-awards-grid" id="badgesContainer">
-          <!-- Populated by JS -->
-        </div>
-
-        <!-- 2 Columns: Leaderboard & Points History -->
-        <div class="dashboard-grid">
-          <!-- Leaderboard -->
-          <div class="card">
-            <div class="card-header">
-              <h2 class="card-title">Batch Leaderboard (Top 5 + Your Rank)</h2>
-              <div style="display:flex; align-items:center; gap:6px;">
-                <label for="toggleShowRank" class="text-xs text-muted">Show my rank:</label>
-                <input type="checkbox" id="toggleShowRank" checked class="toggle-input">
-              </div>
-            </div>
-            <div class="card-body">
-              <div class="leaderboard-list" id="leaderboardList">
-                <!-- Populated by JS -->
-              </div>
-            </div>
-          </div>
-
-          <!-- Points History -->
-          <div class="card">
-            <div class="card-header">
-              <h2 class="card-title">Recent Point Activity</h2>
-              <span class="badge badge-accent">Live Ledger</span>
-            </div>
-            <div class="card-body">
-              <div class="points-history-list" id="pointsHistoryList">
-                <!-- Populated by JS -->
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- 10. VIEW: MARKSHEETS & CERTIFICATES -->
-    <section id="view-marksheet" class="view" aria-labelledby="docsTitle">
-      <div class="view-container">
-        <div class="page-header">
-          <h1 id="docsTitle">Academic Documents</h1>
-          <p>Official marksheets and merit certificates issued by Stellar Academy, with printable PDF layouts.</p>
-        </div>
-
-        <!-- Documents List View -->
-        <div id="docsListView">
-          <div class="docs-list" id="docsCardsList">
-            <!-- Populated by JS -->
-          </div>
-        </div>
-
-        <!-- Printable Document View (Hidden by default, shown when 'View' clicked) -->
-        <div class="doc-viewer" id="docViewer">
-          <div class="print-actions">
-            <button type="button" class="btn btn-secondary" id="btnBackToDocsList">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
-              Back to Documents
-            </button>
-            <button type="button" class="btn btn-primary" id="btnPrintDocument">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>
-              Print / Save as PDF
-            </button>
-          </div>
-
-          <!-- Formatted Paper Document -->
-          <div class="printable-doc" id="printableDocContent">
-            <!-- Header -->
-            <div class="doc-header">
-              <div class="doc-logo-box">SA</div>
-              <div class="doc-center-name">STELLAR ACADEMY</div>
-              <div class="doc-center-addr">42, Orbit Lane, Science Nagar, Pune – 411021 • Phone: +91 98765 43210</div>
-              <div class="doc-exam-name" id="docRenderExamName">Mid Term Examination 2025</div>
-            </div>
-
-            <!-- Student Bio Data -->
-            <table class="doc-student-table">
-              <tr>
-                <td>Student Name:</td>
-                <td id="docRenderStudentName" class="fw-600">Aryan Mehta</td>
-                <td>Roll Number:</td>
-                <td id="docRenderRoll" class="fw-600">SA-101</td>
-              </tr>
-              <tr>
-                <td>Batch / Class:</td>
-                <td id="docRenderBatch">Class 10 – Morning Batch</td>
-                <td>Issue Date:</td>
-                <td id="docRenderIssueDate">2025-10-10</td>
-              </tr>
-              <tr>
-                <td>Verification Code:</td>
-                <td id="docRenderCode" class="fw-600" style="font-family:var(--font-mono); color:var(--primary);">VS2025-A1B2</td>
-                <td>Overall Status:</td>
-                <td id="docRenderStatus"><span class="badge badge-success">VALID</span></td>
-              </tr>
-            </table>
-
-            <!-- Marks Table -->
-            <table class="doc-marks-table">
-              <thead>
-                <tr>
-                  <th>Subject</th>
-                  <th>Maximum Marks</th>
-                  <th>Marks Obtained</th>
-                  <th>Percentage</th>
-                </tr>
-              </thead>
-              <tbody id="docMarksTableBody">
-                <!-- Populated by JS -->
-              </tbody>
-            </table>
-
-            <!-- Summary Chips & QR code -->
-            <div class="doc-summary">
-              <div class="doc-summary-item" style="flex:1;">
-                <div class="doc-summary-value" id="docRenderTotalMarks">81 / 100</div>
-                <div class="doc-summary-label">Total Score</div>
-              </div>
-              <div class="doc-summary-item" style="flex:1;">
-                <div class="doc-summary-value" id="docRenderPercentage">81.0%</div>
-                <div class="doc-summary-label">Aggregate Percentage</div>
-              </div>
-              <div class="doc-summary-item" style="flex:1;">
-                <div class="doc-summary-value" id="docRenderGrade">A</div>
-                <div class="doc-summary-label">Letter Grade</div>
-              </div>
-              <div class="doc-summary-item" style="flex:1;">
-                <div class="doc-summary-value" id="docRenderAttendance">88.5%</div>
-                <div class="doc-summary-label">Term Attendance</div>
-              </div>
-              <!-- Algorithmic QR matrix -->
-              <div style="display:flex; flex-direction:column; align-items:center; justify-content:center;">
-                <div class="doc-qr" id="docQrGraphic" aria-label="Verification QR code">
-                  <!-- 9x9 cells rendered by JS -->
-                </div>
-                <span class="text-xs text-muted" style="margin-top:4px;">Scan to Verify</span>
-              </div>
-            </div>
-
-            <!-- Signatures -->
-            <div class="doc-signatures">
-              <div class="doc-sig-box">
-                <br>
-                <span>Class Coordinator Signature</span>
-              </div>
-              <div class="doc-sig-box">
-                <br>
-                <span>Director / Head of Center</span>
-              </div>
-            </div>
-
-            <!-- Disclaimer -->
-            <div class="doc-disclaimer">
-              Issued by Stellar Academy for coaching and internal evaluation records. Not an official state/central board or university certificate.
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- 11. VIEW: VERIFY DOCUMENT -->
-    <section id="view-verify" class="view" aria-labelledby="verifyTitle">
-      <div class="view-container">
-        <div class="page-header text-center">
-          <h1 id="verifyTitle">Certificate &amp; Marksheet Verification</h1>
-          <p>Public credential verification portal. Confirm authenticity of documents issued by Stellar Academy.</p>
-        </div>
-
-        <div class="verify-form-card">
-          <form id="verifyForm" onsubmit="return false;">
-            <div class="form-group">
-              <label for="verifyCodeInput" class="form-label">Enter 11-Character Document Code:</label>
-              <div class="verify-input-row">
-                <input type="text" id="verifyCodeInput" class="form-input" placeholder="e.g. VS2025-A1B2" maxlength="20" required>
-                <button type="submit" class="btn btn-primary" id="btnVerifySubmit">Verify Code</button>
-              </div>
-            </div>
-          </form>
-
-          <div class="verify-hints">
-            <strong>Demo Codes to Try:</strong>
-            <ul style="margin-top:4px; padding-left:16px; list-style:disc;">
-              <li><code>VS2025-A1B2</code> &mdash; Valid Mid Term Marksheet</li>
-              <li><code>VS2025-X9Y8</code> &mdash; Revoked / Replaced Record</li>
-              <li><code>VS2025-C3D4</code> &mdash; Valid Science Certificate</li>
-            </ul>
-          </div>
-        </div>
-
-        <!-- Verification Result Container -->
-        <div class="verify-result" id="verifyResultContainer" style="display:none;">
-          <!-- Injected by JS -->
-        </div>
-      </div>
-    </section>
-
-    <!-- 12. VIEW: SETTINGS & PROFILE -->
-    <section id="view-settings" class="view" aria-labelledby="settingsTitle">
-      <div class="view-container">
-        <div class="page-header">
-          <h1 id="settingsTitle">Student Settings &amp; Profile</h1>
-          <p>Manage your account preferences, theme, and prototype state.</p>
-        </div>
-
-        <div style="max-width:720px; margin:0 auto;">
-          <!-- Profile Card -->
-          <div class="settings-section">
-            <div class="student-profile-header">
-              <div class="profile-avatar" id="settingsAvatar">AM</div>
-              <div>
-                <div class="profile-name" id="settingsName">Aryan Mehta</div>
-                <div class="profile-meta" id="settingsRoll">Roll No: SA-101 • Class 10 Morning Batch</div>
-                <div class="profile-meta" id="settingsCenter">Stellar Academy, Science Nagar</div>
-              </div>
-            </div>
-            <div class="settings-section-body">
-              <div class="settings-row">
-                <span class="settings-row-label">Parent / Guardian:</span>
-                <span class="settings-row-value" id="settingsParent">Sunita Mehta (+91 98765 11223)</span>
-              </div>
-              <div class="settings-row">
-                <span class="settings-row-label">Date of Birth:</span>
-                <span class="settings-row-value" id="settingsDob">14 March 2010</span>
-              </div>
-              <div class="settings-row">
-                <span class="settings-row-label">Enrolled Batch:</span>
-                <span class="settings-row-value">Class 10 (2025-26)</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Preferences -->
-          <div class="settings-section">
-            <div class="settings-section-header">Interface Preferences</div>
-            <div class="settings-section-body">
-              <div class="settings-row">
-                <div>
-                  <div class="settings-row-label">Dark Color Theme</div>
-                  <div class="text-xs text-muted">Comfortable high-contrast dark theme for night study sessions</div>
-                </div>
-                <div>
-                  <input type="checkbox" id="settingsThemeToggle" class="toggle-input" aria-label="Toggle dark mode">
-                </div>
-              </div>
-
-              <div class="settings-row">
-                <div>
-                  <div class="settings-row-label">Application Language</div>
-                  <div class="text-xs text-muted">Localization placeholder for multi-lingual coaching support</div>
-                </div>
-                <div>
-                  <select class="form-input" style="width:140px;" aria-label="Language">
-                    <option value="en" selected>English</option>
-                    <option value="hi" disabled>Hindi (Coming Soon)</option>
-                    <option value="mr" disabled>Marathi (Coming Soon)</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Demo Reset Section -->
-          <div class="settings-section" style="border-color:#FCA5A5;">
-            <div class="settings-section-header" style="background:var(--error-bg); color:var(--error);">Prototype Data Controls</div>
-            <div class="settings-section-body">
-              <p class="text-sm text-secondary mb-12">
-                All changes, mock fee payments, marked attendance, quiz scores, and focus notes are saved to your browser's local storage.
-              </p>
-              <button type="button" class="btn btn-danger" id="btnResetDemoData">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
-                Reset All Demo Data
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- 13. VIEW: 404 NOT FOUND -->
-    <section id="view-404" class="view" aria-labelledby="notFoundTitle">
-      <div class="view-container">
-        <div class="empty-state">
-          <div class="empty-state-emoji">🔍</div>
-          <h1 class="empty-state-title" id="notFoundTitle">Page Not Found</h1>
-          <p class="empty-state-desc">The section you are looking for does not exist in the Vilarci Study portal.</p>
-          <div style="margin-top: 20px;">
-            <a href="#home" class="btn btn-primary">Return to Dashboard</a>
-          </div>
-        </div>
-      </div>
-    </section>
-
-  </main>
-
-  <!-- ===== FOOTER ===== -->
-  <footer class="footer no-print" role="contentinfo">
-    <div class="footer-content">
-      <p>&copy; 2025 Stellar Academy &bull; <strong>Vilarci Study</strong> Student Portal Prototype &bull; <span class="badge badge-info">Demo Mode</span></p>
-      <p class="text-muted text-xs">All payments are simulated. All student identities and academic metrics are fictional.</p>
-    </div>
-  </footer>
-
-  <!-- ===== SCRIPTS (Classic tags for file:// compatibility) ===== -->
-  <script src="data.js"></script>
-  <script src="main.js"></script>
-
+    </main>
 </body>
 </html>
