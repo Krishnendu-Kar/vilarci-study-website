@@ -229,10 +229,12 @@
       route = hash.split('/')[0];
     }
 
-    // Close mobile menu if open
-    var mobileMenu = document.getElementById('mobileMenu');
+    // Close mobile sidebar if open
+    var appSidebar = document.getElementById('appSidebar');
+    var sidebarBackdrop = document.getElementById('sidebarBackdrop');
     var hamburger = document.getElementById('hamburger');
-    if (mobileMenu) mobileMenu.classList.remove('open');
+    if (appSidebar) appSidebar.classList.remove('open');
+    if (sidebarBackdrop) sidebarBackdrop.classList.remove('active');
     if (hamburger) hamburger.setAttribute('aria-expanded', 'false');
 
     // Hide all views
@@ -297,7 +299,7 @@
   }
 
   function updateNavActiveState(route) {
-    var links = document.querySelectorAll('.nav-link, .nav-mobile-link');
+    var links = document.querySelectorAll('.sidebar-nav-item, .nav-link, .nav-mobile-link');
     links.forEach(function (link) {
       var r = link.getAttribute('data-route');
       if (r === route) {
@@ -308,9 +310,41 @@
     });
   }
 
+  function updateSidebarProfile() {
+    var student = getActiveStudent();
+    var avatar = document.getElementById('sidebarAvatar');
+    var name = document.getElementById('sidebarStudentName');
+    var roll = document.getElementById('sidebarStudentRoll');
+    var feeBadge = document.getElementById('sidebarFeeBadge');
+
+    if (avatar) avatar.textContent = student.photo_initials || 'ST';
+    if (name) name.textContent = student.name;
+    if (roll) {
+      var batchName = student.batch_id === 'batch-2' ? 'Class 9 Foundation' : 'Class 10 Board Prep';
+      roll.textContent = 'Roll: ' + student.roll + ' • ' + batchName;
+    }
+
+    if (feeBadge) {
+      var studentFees = (STATE.fees || []).filter(function (f) {
+        return f.student_id === currentStudentId;
+      });
+      var hasPending = studentFees.some(function (f) { return f.status === 'pending'; });
+      if (hasPending) {
+        feeBadge.style.display = 'inline-block';
+        feeBadge.className = 'badge badge-warning';
+        feeBadge.textContent = 'Due';
+      } else {
+        feeBadge.style.display = 'inline-block';
+        feeBadge.className = 'badge badge-success';
+        feeBadge.textContent = 'Paid';
+      }
+    }
+  }
+
   // ─── 7. PAGE: HOME / DASHBOARD ─────────────────────────────────────────────
   function renderHomeView() {
     var student = getActiveStudent();
+    updateSidebarProfile();
     var parentBanner = document.getElementById('parentBanner');
     var studentHeader = document.getElementById('studentHeader');
     var homeStatsGrid = document.getElementById('homeStatsGrid');
@@ -326,6 +360,7 @@
 
       childSelect.addEventListener('change', function () {
         currentStudentId = this.value;
+        updateSidebarProfile();
         showToast('Switched profile to ' + getActiveStudent().name, 'info', 2000);
         renderHomeView();
       });
@@ -2046,19 +2081,60 @@
   function initApp() {
     initState();
     applyTheme(STATE.theme);
+    updateSidebarProfile();
 
     var hamburger = document.getElementById('hamburger');
-    var mobileMenu = document.getElementById('mobileMenu');
-    if (hamburger && mobileMenu) {
+    var appSidebar = document.getElementById('appSidebar');
+    var sidebarBackdrop = document.getElementById('sidebarBackdrop');
+    var sidebarCloseBtn = document.getElementById('sidebarCloseBtn');
+
+    function closeSidebar() {
+      if (appSidebar) appSidebar.classList.remove('open');
+      if (sidebarBackdrop) sidebarBackdrop.classList.remove('active');
+      if (hamburger) hamburger.setAttribute('aria-expanded', 'false');
+    }
+
+    function openSidebar() {
+      if (appSidebar) appSidebar.classList.add('open');
+      if (sidebarBackdrop) sidebarBackdrop.classList.add('active');
+      if (hamburger) hamburger.setAttribute('aria-expanded', 'true');
+    }
+
+    if (hamburger) {
       hamburger.addEventListener('click', function () {
-        var isOpen = mobileMenu.classList.toggle('open');
-        hamburger.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+        if (appSidebar && appSidebar.classList.contains('open')) {
+          closeSidebar();
+        } else {
+          openSidebar();
+        }
       });
     }
+
+    if (sidebarCloseBtn) {
+      sidebarCloseBtn.addEventListener('click', closeSidebar);
+    }
+
+    if (sidebarBackdrop) {
+      sidebarBackdrop.addEventListener('click', closeSidebar);
+    }
+
+    var sidebarNavItems = document.querySelectorAll('.sidebar-nav-item');
+    sidebarNavItems.forEach(function (item) {
+      item.addEventListener('click', function () {
+        if (window.innerWidth < 960) {
+          closeSidebar();
+        }
+      });
+    });
 
     var themeToggleBtn = document.getElementById('themeToggle');
     if (themeToggleBtn) {
       themeToggleBtn.addEventListener('click', toggleTheme);
+    }
+
+    var themeToggleMobile = document.getElementById('themeToggleMobile');
+    if (themeToggleMobile) {
+      themeToggleMobile.addEventListener('click', toggleTheme);
     }
 
     var modeToggleBtn = document.getElementById('modeToggle');
