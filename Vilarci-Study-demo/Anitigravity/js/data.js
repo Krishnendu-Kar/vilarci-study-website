@@ -36,7 +36,7 @@ window.DATA = {
       phone: '+91 98220 12345',
       email: 'verma.chem@apexchem.in',
       address: 'Shop 12, Crystal Heights, FC Road, Pune – 411005',
-      color: '#991B1B',
+      color: '#0284C7',
       monthly_fee: 1800,
       active_batch: 'Class 10 Board Excellence Batch'
     },
@@ -53,7 +53,7 @@ window.DATA = {
       phone: '+91 97330 54321',
       email: 'arindam.bio@zenithtuitions.com',
       address: 'Green Meadows Wing B, Kothrud, Pune – 411038',
-      color: '#B45309',
+      color: '#059669',
       monthly_fee: 1600,
       active_batch: 'Pre-Medical & High School Biology'
     },
@@ -70,7 +70,7 @@ window.DATA = {
       phone: '+91 98110 99887',
       email: 'kavita.roy@horizonstudio.org',
       address: '302, Knowledge Park, Camp, Pune – 411001',
-      color: '#701A75',
+      color: '#7C3AED',
       monthly_fee: 1200,
       active_batch: 'Class 8-10 English Literature Club'
     }

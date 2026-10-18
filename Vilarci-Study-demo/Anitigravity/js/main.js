@@ -129,6 +129,56 @@
     });
   }
 
+  function getSubjectColor(subject) {
+    var s = (subject || '').toLowerCase();
+    if (s.indexOf('math') !== -1) return 'var(--color-maths)';
+    if (s.indexOf('phys') !== -1) return 'var(--color-physics)';
+    if (s.indexOf('chem') !== -1) return 'var(--color-chemistry)';
+    if (s.indexOf('bio') !== -1) return 'var(--color-biology)';
+    if (s.indexOf('eng') !== -1) return 'var(--color-english)';
+    return 'var(--primary)';
+  }
+
+  function getSubjectBadgeClass(subject) {
+    var s = (subject || '').toLowerCase();
+    if (s.indexOf('math') !== -1) return 'badge-maths';
+    if (s.indexOf('phys') !== -1) return 'badge-physics';
+    if (s.indexOf('chem') !== -1) return 'badge-chemistry';
+    if (s.indexOf('bio') !== -1) return 'badge-biology';
+    if (s.indexOf('eng') !== -1) return 'badge-english';
+    return 'badge-primary';
+  }
+
+  function generateQrSvg(code) {
+    code = code || 'VS2025';
+    var sum = 0;
+    for (var i = 0; i < code.length; i++) sum += code.charCodeAt(i);
+    var rects = '';
+    var cells = [
+      [1,1,1,1,1,1,1,0,1],
+      [1,0,0,0,0,0,1,0,0],
+      [1,0,1,1,1,0,1,0,1],
+      [1,0,1,1,1,0,1,0,0],
+      [1,0,0,0,0,0,1,1,1],
+      [1,1,1,1,1,1,1,0,1],
+      [0,0,0,0,0,0,0,1,0],
+      [1,1,0,1,0,1,1,0,1],
+      [1,0,1,0,1,0,0,1,1]
+    ];
+    for (var r = 0; r < 9; r++) {
+      for (var c = 0; c < 9; c++) {
+        var isFilled = cells[r][c] || ((sum + r * 7 + c * 3) % 3 === 0);
+        if ((r < 3 && c < 3) || (r < 3 && c > 5) || (r > 5 && c < 3)) {
+          isFilled = cells[r][c];
+        }
+        if (isFilled) {
+          rects += '<rect x="' + (c * 6) + '" y="' + (r * 6) + '" width="5.2" height="5.2" rx="0.8" fill="#1F0D12"/>';
+        }
+      }
+    }
+    return '<svg viewBox="0 0 54 54" class="doc-qr-svg" role="img" aria-label="Verification QR code">' + rects + '</svg>';
+  }
+
   // ─── 4. TOAST SYSTEM ───────────────────────────────────────────────────────
   function showToast(message, type, duration) {
     type = type || 'info';
@@ -857,18 +907,20 @@
       } else {
         classesList.innerHTML = todaysSchedule.map(function (c) {
           var centerObj = getCenterById(c.center_id);
+          var subBadgeClass = getSubjectBadgeClass(c.subject);
           return (
             '<div class="class-item">' +
               '<div class="class-time">' +
                 '<span class="class-time-start">' + c.start_time + '</span>' +
+                '<span class="class-time-sep">to</span>' +
                 '<span class="class-time-end">' + c.end_time + '</span>' +
               '</div>' +
               '<div class="class-details">' +
-                '<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">' +
-                  '<span class="class-subject">' + c.subject + '</span>' +
-                  '<span class="center-tag" style="border-color:' + centerObj.color + '; color:' + centerObj.color + ';">' + centerObj.name + '</span>' +
+                '<div class="class-top-row">' +
+                  '<span class="badge ' + subBadgeClass + '">' + c.subject + '</span>' +
+                  '<span class="center-tag" style="border-color:' + centerObj.color + '; color:' + centerObj.color + ';">🏛️ ' + centerObj.name + '</span>' +
                 '</div>' +
-                '<div class="class-teacher">' + c.teacher + ' &bull; ' + c.room + '</div>' +
+                '<div class="class-teacher">' + c.teacher + ' &bull; Room: ' + c.room + '</div>' +
               '</div>' +
             '</div>'
           );
@@ -888,11 +940,15 @@
       var nextTest = upcomingTests[upcomingTests.length - 1];
       if (nextTest) {
         var tCenter = getCenterById(nextTest.center_id);
+        var subBadge = getSubjectBadgeClass(nextTest.subject);
         nextTestContainer.innerHTML =
           '<div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">' +
             '<div>' +
               '<h3 class="text-base fw-700" style="color:var(--text-main);">' + nextTest.name + '</h3>' +
-              '<p class="text-xs text-muted">Subject: ' + nextTest.subject + ' &bull; ' + tCenter.name + '</p>' +
+              '<div style="display:flex; align-items:center; gap:6px; margin-top:4px;">' +
+                '<span class="badge ' + subBadge + '" style="font-size:10px;">' + nextTest.subject + '</span>' +
+                '<span class="text-xs text-muted">&bull; ' + tCenter.name + '</span>' +
+              '</div>' +
             '</div>' +
             '<span class="badge badge-accent">Recent: ' + nextTest.marks_obtained + '/' + nextTest.total_marks + ' pts</span>' +
           '</div>' +
@@ -920,6 +976,7 @@
         var subTopics = activeTopics.filter(function (t) { return t.subject === sub; });
         var coveredCount = subTopics.filter(function (t) { return t.status === 'covered'; }).length;
         var pct = subTopics.length > 0 ? Math.round((coveredCount / subTopics.length) * 100) : 75;
+        var subColor = getSubjectColor(sub);
 
         var radius = 28;
         var circum = 2 * Math.PI * radius;
@@ -930,7 +987,7 @@
             '<div class="progress-ring-wrapper">' +
               '<svg class="progress-ring" width="70" height="70">' +
                 '<circle class="progress-ring-circle-bg" stroke="var(--border)" stroke-width="6" fill="transparent" r="' + radius + '" cx="35" cy="35"/>' +
-                '<circle class="progress-ring-circle" stroke="var(--primary)" stroke-width="6" fill="transparent" r="' + radius + '" cx="35" cy="35" style="stroke-dasharray:' + circum + '; stroke-dashoffset:' + offset + '; stroke-linecap:round;"/>' +
+                '<circle class="progress-ring-circle" stroke="' + subColor + '" stroke-width="6" fill="transparent" r="' + radius + '" cx="35" cy="35" style="stroke-dasharray:' + circum + '; stroke-dashoffset:' + offset + '; stroke-linecap:round;"/>' +
               '</svg>' +
               '<span class="progress-ring-text">' + pct + '%</span>' +
             '</div>' +
@@ -2035,19 +2092,21 @@
         listContainer.innerHTML = studentTests.map(function (test) {
           var pct = Math.round((test.marks_obtained / test.total_marks) * 100);
           var centerObj = getCenterById(test.center_id);
+          var subBadgeClass = getSubjectBadgeClass(test.subject);
+          var pctBadgeClass = pct >= 85 ? 'badge-success' : pct >= 70 ? 'badge-accent' : 'badge-warning';
           return (
             '<div class="test-item">' +
               '<div class="test-score-box">' +
                 '<span class="test-score-val">' + test.marks_obtained + '/' + test.total_marks + '</span>' +
-                '<span class="test-score-pct">' + pct + '%</span>' +
+                '<span class="test-score-pct ' + pctBadgeClass + '">' + pct + '%</span>' +
               '</div>' +
               '<div class="test-info">' +
-                '<div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:2px;">' +
+                '<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:4px;">' +
                   '<span class="test-name">' + test.name + '</span>' +
+                  '<span class="badge ' + subBadgeClass + '" style="font-size:10px;">' + test.subject + '</span>' +
                   '<span class="center-tag" style="border-color:' + centerObj.color + '; color:' + centerObj.color + '; font-size:10px;">🏛️ ' + centerObj.name + '</span>' +
                 '</div>' +
-                '<div class="test-meta">' + test.date + ' &bull; Subject: ' + test.subject + ' &bull; Duration: ' + test.duration_min + 'm</div>' +
-                '<div class="text-xs text-muted" style="margin-top:4px;">Topics: ' + test.topics_tested.join(', ') + '</div>' +
+                '<div class="test-meta">' + test.date + ' &bull; Duration: ' + test.duration_min + 'm &bull; Topics: ' + test.topics_tested.join(', ') + '</div>' +
               '</div>' +
             '</div>'
           );
@@ -2055,15 +2114,15 @@
       }
     }
 
-    // Pure SVG Subject Score Chart
+    // Pure SVG Subject Score Chart (Diverse Academic Palette)
     var chartContainer = document.getElementById('testsChartContainer');
     if (chartContainer) {
       var sampleSubjects = [
-        { name: 'Maths', score: 88, color: '#800020' },
-        { name: 'Physics', score: 76, color: '#9E1B32' },
-        { name: 'Chemistry', score: 92, color: '#B45309' },
-        { name: 'Biology', score: 90, color: '#D97706' },
-        { name: 'English', score: 80, color: '#701A75' }
+        { name: 'Maths', score: 88, color: '#2563EB' },
+        { name: 'Physics', score: 76, color: '#7C3AED' },
+        { name: 'Chemistry', score: 92, color: '#0D9488' },
+        { name: 'Biology', score: 90, color: '#16A34A' },
+        { name: 'English', score: 80, color: '#EA580C' }
       ];
 
       var svgWidth = 320;
@@ -2321,23 +2380,47 @@
         listContainer.innerHTML = activeDocs.map(function (doc) {
           var centerObj = getCenterById(doc.center_id);
           var isValid = doc.status === 'valid';
+          var subPills = (doc.subject_marks || []).map(function (sm) {
+            var sClass = getSubjectBadgeClass(sm.subject);
+            var sPct = Math.round((sm.obtained / sm.max) * 100);
+            return '<span class="badge ' + sClass + '" style="font-size:10px;">' + sm.subject + ': ' + sm.obtained + '/' + sm.max + ' (' + sPct + '%)</span>';
+          }).join(' ');
+
           return (
-            '<div class="card doc-item-card">' +
-              '<div style="font-size:36px; margin-bottom:8px;">' + (doc.type === 'marksheet' ? '📜' : '🎖️') + '</div>' +
-              '<div style="display:flex; gap:6px; align-items:center; margin-bottom:6px;">' +
-                '<span class="badge badge-primary text-xs">' + doc.type.toUpperCase() + '</span>' +
-                '<span class="center-tag" style="border-color:' + centerObj.color + '; color:' + centerObj.color + '; font-size:10px;">🏛️ ' + centerObj.name + '</span>' +
-                '<span class="badge ' + (isValid ? 'badge-success' : 'badge-error') + ' text-xs">' + doc.status.toUpperCase() + '</span>' +
+            '<div class="doc-item-card">' +
+              '<div>' +
+                '<div class="doc-card-top">' +
+                  '<div class="doc-card-icon">' + (doc.type === 'marksheet' ? '📜' : '🎖️') + '</div>' +
+                  '<div class="doc-card-badges">' +
+                    '<span class="badge badge-primary">' + doc.type.toUpperCase() + '</span>' +
+                    '<span class="center-tag" style="border-color:' + centerObj.color + '; color:' + centerObj.color + ';">🏛️ ' + centerObj.name + '</span>' +
+                    '<span class="badge ' + (isValid ? 'badge-success' : 'badge-error') + '">' + (isValid ? '✅ VALID' : '❌ REVOKED') + '</span>' +
+                  '</div>' +
+                '</div>' +
+                '<h3 class="doc-card-title">' + doc.title + '</h3>' +
+                '<div class="doc-card-meta">' +
+                  '<span>Issued: <strong>' + doc.issue_date + '</strong></span> &bull; ' +
+                  '<span>Ref: <code>' + doc.code + '</code></span>' +
+                '</div>' +
+                '<div class="doc-card-subs-preview">' + subPills + '</div>' +
+                '<div class="doc-card-scores">' +
+                  '<div class="doc-card-score-metric">' +
+                    '<span class="doc-card-score-label">Aggregate Marks</span>' +
+                    '<span class="doc-card-score-value">' + doc.total_obtained + '/' + doc.total_max + ' (' + doc.percentage + '%)</span>' +
+                  '</div>' +
+                  '<div class="badge badge-accent doc-card-grade-badge">Grade ' + doc.grade + '</div>' +
+                '</div>' +
               '</div>' +
-              '<h3 class="text-base fw-700" style="margin-bottom:4px;">' + doc.title + '</h3>' +
-              '<p class="text-xs text-muted mb-12">Issued on: ' + doc.issue_date + ' &bull; Verification Code: <code>' + doc.code + '</code></p>' +
-              '<div style="display:flex; justify-content:space-between; align-items:center; background:var(--surface-muted); padding:8px 12px; border-radius:var(--radius-sm); margin-bottom:14px;">' +
-                '<span class="text-xs text-muted">Cumulative Score:</span>' +
-                '<span class="fw-800" style="color:var(--primary);">' + doc.total_obtained + '/' + doc.total_max + ' (' + doc.percentage + '%)</span>' +
+              '<div style="display:flex; gap:10px; margin-top:14px;">' +
+                '<button type="button" class="btn btn-primary btn-sm btn-view-doc" data-doc-id="' + doc.id + '" style="flex:1;">' +
+                  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px; height:14px;"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>' +
+                  'View &amp; Print Marksheet' +
+                '</button>' +
+                '<a href="#verify/' + doc.code + '" class="btn btn-secondary btn-sm" title="Verify Document Authenticity">' +
+                  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px; height:14px;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>' +
+                  'Verify' +
+                '</a>' +
               '</div>' +
-              '<button type="button" class="btn btn-primary btn-sm btn-view-doc" data-doc-id="' + doc.id + '">' +
-                'View &amp; Print Certificate' +
-              '</button>' +
             '</div>'
           );
         }).join('');
@@ -2358,89 +2441,127 @@
       if (listView) listView.style.display = 'none';
       if (docViewer) docViewer.classList.add('active');
 
-      var container = document.getElementById('printableDocContainer');
+      var container = document.getElementById('printableDocContent');
       if (!container) return;
 
       var centerObj = getCenterById(doc.center_id);
+      var isValid = doc.status === 'valid';
 
-      var marksRowsHtml = doc.subject_marks.map(function (m) {
+      var marksRowsHtml = (doc.subject_marks || []).map(function (m) {
         var pct = Math.round((m.obtained / m.max) * 100);
+        var subBadge = getSubjectBadgeClass(m.subject);
+        var perfGrade = pct >= 90 ? 'Outstanding (O)' : pct >= 80 ? 'Distinction (A+)' : pct >= 70 ? 'Merit (A)' : 'Pass (B)';
         return (
           '<tr>' +
-            '<td class="fw-700">' + m.subject + '</td>' +
-            '<td>' + m.max + '</td>' +
-            '<td class="fw-800">' + m.obtained + '</td>' +
-            '<td>' + pct + '%</td>' +
+            '<td><span class="badge ' + subBadge + '" style="font-size:11.5px; padding:3px 10px;">' + m.subject + '</span></td>' +
+            '<td class="text-center fw-600">' + m.max + '</td>' +
+            '<td class="text-center fw-800" style="color:var(--text-main);">' + m.obtained + '</td>' +
+            '<td class="text-center fw-700">' + pct + '%</td>' +
+            '<td class="text-right fw-600 text-sm" style="color:var(--text-secondary);">' + perfGrade + '</td>' +
           '</tr>'
         );
       }).join('');
 
+      var qrSvg = generateQrSvg(doc.code);
+
       container.innerHTML =
         '<div class="doc-header">' +
-          '<div class="doc-logo-box" style="background: linear-gradient(135deg, ' + centerObj.color + ', #4C0519);">' + centerObj.logo_text + '</div>' +
+          '<div class="doc-logo-box" style="background: linear-gradient(135deg, ' + centerObj.color + ', #2A0812);">' + centerObj.logo_text + '</div>' +
           '<div class="doc-center-name">' + (doc.center_name || centerObj.name) + '</div>' +
-          '<div class="doc-center-addr">' + (centerObj.address || 'Accredited STEM & Board Coaching Partner') + '</div>' +
-          '<div class="doc-exam-name">' + doc.exam_name + '</div>' +
+          '<div class="doc-center-addr">' + (centerObj.address || '42, Science Nagar, Pune – 411021') + ' &bull; Phone: ' + centerObj.phone + '</div>' +
+          '<div class="doc-affiliation-tag">Accredited Academic Coaching Partner &bull; Est. ' + (centerObj.established || 2018) + '</div>' +
+          '<div class="doc-exam-banner">' + doc.exam_name + '</div>' +
         '</div>' +
 
         '<table class="doc-student-table">' +
           '<tr>' +
-            '<td>Candidate Name:</td><td class="fw-700">' + student.name + '</td>' +
-            '<td>Roll Registration:</td><td class="fw-700">' + student.roll + '</td>' +
+            '<td>Candidate Name:</td><td class="fw-800" style="font-size:15px;">' + student.name + '</td>' +
+            '<td>Roll Registration:</td><td class="fw-800" style="font-family:var(--font-mono);">' + student.roll + '</td>' +
           '</tr>' +
           '<tr>' +
-            '<td>Academic Class:</td><td>' + student.class + ' (' + student.board + ')</td>' +
+            '<td>Academic Class:</td><td>' + student.class + ' (' + (student.board || 'CBSE') + ')</td>' +
             '<td>Date of Issue:</td><td>' + doc.issue_date + '</td>' +
           '</tr>' +
           '<tr>' +
-            '<td>Verification Ref:</td><td><code>' + doc.code + '</code></td>' +
-            '<td>Credential Status:</td><td><span class="badge ' + (doc.status === 'valid' ? 'badge-success' : 'badge-error') + '">' + doc.status.toUpperCase() + '</span></td>' +
+            '<td>Verification Ref:</td><td><code style="font-size:13px; font-weight:700; color:#800020;">' + doc.code + '</code></td>' +
+            '<td>Credential Status:</td><td><span class="badge ' + (isValid ? 'badge-success' : 'badge-error') + '" style="font-size:11px;">' + (isValid ? '✅ VALID &amp; AUTHENTIC' : '❌ REVOKED / EXPIRED') + '</span></td>' +
           '</tr>' +
         '</table>' +
 
         '<table class="doc-marks-table">' +
           '<thead>' +
-            '<tr><th>Curriculum Discipline</th><th>Maximum Marks</th><th>Marks Scored</th><th>Percentage</th></tr>' +
+            '<tr>' +
+              '<th>Curriculum Discipline</th>' +
+              '<th style="text-align:center;">Maximum Marks</th>' +
+              '<th style="text-align:center;">Marks Obtained</th>' +
+              '<th style="text-align:center;">Percentage</th>' +
+              '<th style="text-align:right;">Performance Classification</th>' +
+            '</tr>' +
           '</thead>' +
           '<tbody>' +
             marksRowsHtml +
             '<tr class="doc-total-row">' +
-              '<td>GRAND AGGREGATE</td>' +
-              '<td>' + doc.total_max + '</td>' +
-              '<td>' + doc.total_obtained + '</td>' +
-              '<td>' + doc.percentage + '%</td>' +
+              '<td>GRAND AGGREGATE EVALUATION</td>' +
+              '<td style="text-align:center;">' + doc.total_max + '</td>' +
+              '<td style="text-align:center;">' + doc.total_obtained + '</td>' +
+              '<td style="text-align:center;">' + doc.percentage + '%</td>' +
+              '<td style="text-align:right; font-weight:800; color:var(--accent);">GRADE ' + doc.grade + '</td>' +
             '</tr>' +
           '</tbody>' +
         '</table>' +
 
         '<div class="doc-summary">' +
-          '<div style="flex:1;">' +
-            '<div class="doc-summary-label">Final Evaluation Grade</div>' +
+          '<div class="doc-summary-item">' +
             '<div class="doc-summary-value">' + doc.grade + '</div>' +
+            '<div class="doc-summary-label">Final Letter Grade</div>' +
           '</div>' +
-          '<div style="flex:1;">' +
-            '<div class="doc-summary-label">Academic Attendance</div>' +
+          '<div class="doc-summary-item">' +
+            '<div class="doc-summary-value">' + doc.percentage + '%</div>' +
+            '<div class="doc-summary-label">Aggregate Percentage</div>' +
+          '</div>' +
+          '<div class="doc-summary-item">' +
             '<div class="doc-summary-value">' + doc.attendance_percent + '%</div>' +
+            '<div class="doc-summary-label">Academic Attendance</div>' +
           '</div>' +
-          '<div style="flex:1;">' +
+          '<div class="doc-summary-item">' +
+            '<div class="doc-summary-value" style="color:var(--accent); font-size:18px;">DISTINCTION</div>' +
             '<div class="doc-summary-label">Result Classification</div>' +
-            '<div class="doc-summary-value" style="color:var(--accent);">DISTINCTION</div>' +
           '</div>' +
         '</div>' +
 
-        '<div style="display:flex; justify-content:space-between; align-items:flex-end; border-top:1px solid #E8DDDD; padding-top:20px;">' +
-          '<div style="text-align:center;">' +
-            '<div style="font-family:serif; font-style:italic; font-size:18px; color:#574147;">' + (doc.director_name || centerObj.teacher_name) + '</div>' +
-            '<div style="border-top:1px solid #7E636B; width:180px; margin-top:4px; font-size:11px; color:#7E636B;">Authorized Academic Signatory</div>' +
+        '<div class="doc-auth-block">' +
+          '<div class="doc-qr-area">' +
+            qrSvg +
+            '<div>' +
+              '<div class="text-xs fw-800" style="color:#800020; letter-spacing:0.5px;">DIGITAL AUTHENTICATION RECORD</div>' +
+              '<div class="text-xs text-secondary" style="margin-top:2px;">Scan QR to verify credential registry ref: <strong style="font-family:var(--font-mono);">' + doc.code + '</strong></div>' +
+              '<div class="text-xs text-muted" style="margin-top:2px;">Online portal: index.html#verify/' + doc.code + '</div>' +
+            '</div>' +
           '</div>' +
-          '<div style="text-align:right;">' +
-            '<div style="font-family:var(--font-mono); font-size:11px; color:#7E636B;">AUTHENTICITY VERIFICATION</div>' +
-            '<div style="font-size:12px; font-weight:700; color:var(--primary); font-family:var(--font-mono);">' + doc.code + '</div>' +
+          '<div class="doc-seal-graphic">' +
+            '<div class="doc-seal-text">VILARCI NETWORK</div>' +
+            '<div class="doc-seal-star">★ ★ ★</div>' +
+            '<div class="doc-seal-text" style="color:#C28828;">OFFICIAL SEAL</div>' +
+            '<div class="doc-seal-star">★</div>' +
+            '<div class="doc-seal-text">' + centerObj.logo_text + ' CERTIFIED</div>' +
+          '</div>' +
+        '</div>' +
+
+        '<div class="doc-signatures">' +
+          '<div class="doc-sig-box">' +
+            '<div class="doc-sig-line">Alok Sharma</div>' +
+            '<div class="doc-sig-title">Academic Coordinator</div>' +
+            '<div class="doc-sig-sub">Department of Science &amp; STEM Curriculum</div>' +
+          '</div>' +
+          '<div class="doc-sig-box">' +
+            '<div class="doc-sig-line">' + (doc.director_name || centerObj.teacher_name).split('(')[0] + '</div>' +
+            '<div class="doc-sig-title">' + (doc.director_name || centerObj.teacher_name) + '</div>' +
+            '<div class="doc-sig-sub">Director / Head of Center, ' + (doc.center_name || centerObj.name) + '</div>' +
           '</div>' +
         '</div>' +
 
         '<div class="doc-disclaimer">' +
-          'Issued by ' + (doc.center_name || centerObj.name) + '. Not a board or university certificate. Internal coaching evaluation credential.' +
+          'Issued by ' + (doc.center_name || centerObj.name) + ' for internal academic coaching records and continuous student assessment. Not a state board or statutory university examination certificate.' +
         '</div>';
 
       window.scrollTo(0, 0);
