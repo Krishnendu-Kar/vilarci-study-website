@@ -1,7 +1,9 @@
 // ============================================================================
-// js/main.js — Vilarci Study Student & Parent Portal
-// Full vanilla JavaScript application logic (Router, State, UI Controllers)
-// Compatible with file:// protocol — No ES modules or external libraries.
+// js/main.js — Vilarci Study: Multi-Coaching & Tuition Platform
+// Demo v2.0 (Maroon Edition) — Full Vanilla JavaScript Application Controller
+// Supports multiple coaching centers/teachers, up to 5 student profiles,
+// center-specific academic records (fees, syllabus, attendance, videos, marksheets),
+// and universal STEM simulations & focus room. Zero external dependencies.
 // ============================================================================
 
 (function () {
@@ -10,6 +12,7 @@
   // ─── 1. GLOBAL STATE & CONFIGURATION ───────────────────────────────────────
   var DATA = window.DATA || {};
   var currentStudentId = 'student-1';
+  var currentCenterId = 'all'; // 'all' or specific center ID e.g. 'center-1'
   var isParentMode = false;
   var currentMonthIndex = 9; // October (0-indexed: 7=Aug, 8=Sep, 9=Oct 2025)
   var currentYear = 2025;
@@ -22,7 +25,7 @@
   var quizScore = 0;
   var quizAnswered = false;
 
-  // ─── 2. STORAGE HELPERS (TRY/CATCH WRAPPED) ─────────────────────────────────
+  // ─── 2. LOCAL STORAGE HELPERS ──────────────────────────────────────────────
   var Store = {
     get: function (key, fallback) {
       try {
@@ -52,17 +55,21 @@
     }
   };
 
-  // Mutable Application State (persisted to localStorage)
+  // Application State
   var STATE = {};
 
   function initState() {
     STATE = {
+      students: Store.get('vs_students', DATA.students || []),
+      centers: Store.get('vs_centers', DATA.centers || []),
       attendance: Store.get('vs_attendance', DATA.attendance || []),
       fees: Store.get('vs_fees', DATA.fees || []),
       syllabus: Store.get('vs_syllabus', DATA.syllabus || []),
       tests: Store.get('vs_tests', DATA.tests || []),
-      points: Store.get('vs_points', 1240),
-      streak: Store.get('vs_streak', 12),
+      videos: Store.get('vs_videos', DATA.videos || []),
+      documents: Store.get('vs_documents', DATA.documents || []),
+      points: Store.get('vs_points', 1420),
+      streak: Store.get('vs_streak', 14),
       focus_sessions: Store.get('vs_focus_sessions', []),
       video_notes: Store.get('vs_video_notes', {}),
       theme: Store.get('vs_theme', 'light'),
@@ -72,22 +79,57 @@
     };
   }
 
+  // ─── 3. MODEL LOOKUPS & HELPERS ───────────────────────────────────────────
   function getActiveStudent() {
-    return (DATA.students || []).find(function (s) {
+    var list = (STATE.students && STATE.students.length > 0) ? STATE.students : (DATA.students || []);
+    return list.find(function (s) {
       return s.id === currentStudentId;
-    }) || {
+    }) || list[0] || {
       id: 'student-1',
       name: 'Aryan Mehta',
       roll: 'SA-101',
-      batch_id: 'batch-1',
+      class: 'Class 10',
+      board: 'CBSE',
       parent_name: 'Sunita Mehta',
       photo_initials: 'AM',
-      points: STATE.points,
-      streak: STATE.streak
+      enrolled_centers: ['center-1', 'center-2', 'center-3'],
+      points: STATE.points || 1420,
+      streak: STATE.streak || 14
     };
   }
 
-  // ─── 3. TOAST NOTIFICATION SYSTEM ──────────────────────────────────────────
+  function getActiveCenter() {
+    if (currentCenterId === 'all') return null;
+    var list = (STATE.centers && STATE.centers.length > 0) ? STATE.centers : (DATA.centers || []);
+    return list.find(function (c) {
+      return c.id === currentCenterId;
+    }) || null;
+  }
+
+  function getCenterById(centerId) {
+    var list = (STATE.centers && STATE.centers.length > 0) ? STATE.centers : (DATA.centers || []);
+    return list.find(function (c) {
+      return c.id === centerId;
+    }) || {
+      id: centerId,
+      name: 'Independent Faculty',
+      color: '#800020',
+      logo_text: 'VS',
+      type: 'Coaching',
+      teacher_name: 'Faculty Instructor'
+    };
+  }
+
+  function getStudentEnrolledCenters(studentId) {
+    var student = (STATE.students || []).find(function (s) { return s.id === studentId; });
+    var allCenters = STATE.centers || DATA.centers || [];
+    if (!student || !student.enrolled_centers) return allCenters;
+    return allCenters.filter(function (c) {
+      return student.enrolled_centers.indexOf(c.id) !== -1;
+    });
+  }
+
+  // ─── 4. TOAST SYSTEM ───────────────────────────────────────────────────────
   function showToast(message, type, duration) {
     type = type || 'info';
     duration = duration || 3200;
@@ -103,12 +145,14 @@
       iconSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>';
     } else if (type === 'error') {
       iconSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>';
+    } else if (type === 'warning') {
+      iconSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
     }
 
     toast.innerHTML =
       '<div class="toast-icon">' + iconSvg + '</div>' +
       '<div class="toast-msg">' + message + '</div>' +
-      '<button type="button" class="toast-close" aria-label="Close notification">' +
+      '<button type="button" class="toast-close" aria-label="Close">' +
         '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
       '</button>';
 
@@ -122,11 +166,10 @@
 
     closeBtn.addEventListener('click', removeToast);
     container.appendChild(toast);
-
     setTimeout(removeToast, duration);
   }
 
-  // ─── 4. MODAL SYSTEM ───────────────────────────────────────────────────────
+  // ─── 5. MODAL SYSTEM ───────────────────────────────────────────────────────
   function openModal(options) {
     var container = document.getElementById('modalContainer');
     if (!container) return;
@@ -166,7 +209,7 @@
     return close;
   }
 
-  // ─── 5. THEME & HEADER CONTROLS ───────────────────────────────────────────
+  // ─── 6. THEME SYSTEM ───────────────────────────────────────────────────────
   function applyTheme(theme) {
     STATE.theme = theme;
     Store.set('vs_theme', theme);
@@ -190,7 +233,7 @@
   function toggleTheme() {
     var newTheme = STATE.theme === 'dark' ? 'light' : 'dark';
     applyTheme(newTheme);
-    showToast('Switched to ' + newTheme + ' theme', 'info', 2000);
+    showToast('Switched to ' + (newTheme === 'dark' ? 'Deep Wine Dark' : 'Maroon Light') + ' mode', 'info', 2000);
   }
 
   function toggleParentMode() {
@@ -201,17 +244,380 @@
     if (isParentMode) {
       if (toggleBtn) toggleBtn.classList.add('parent-active');
       if (toggleLabel) toggleLabel.textContent = 'Parent Mode';
-      showToast('Switched to Parent View', 'info', 2500);
+      showToast('Switched to Parent Dashboard (Household Overview)', 'info', 2500);
     } else {
       if (toggleBtn) toggleBtn.classList.remove('parent-active');
       if (toggleLabel) toggleLabel.textContent = 'Student';
-      showToast('Switched to Student View', 'info', 2500);
+      showToast('Switched to Student Portal View', 'info', 2500);
     }
 
     handleRouting();
   }
 
-  // ─── 6. ROUTER & NAVIGATION ────────────────────────────────────────────────
+  // ─── 7. MULTI-STUDENT PROFILE MANAGEMENT (Up to 5 profiles) ────────────────
+  function renderStudentSelector() {
+    var sidebarSelect = document.getElementById('sidebarStudentSelect');
+    var childSelect = document.getElementById('childSelect');
+    var students = STATE.students || DATA.students || [];
+
+    var optionsHtml = students.map(function (s) {
+      return '<option value="' + s.id + '"' + (s.id === currentStudentId ? ' selected' : '') + '>' +
+        s.name + ' (' + s.class + ')' +
+      '</option>';
+    }).join('');
+
+    if (sidebarSelect) {
+      sidebarSelect.innerHTML = optionsHtml;
+      sidebarSelect.onchange = function () {
+        setStudent(this.value);
+      };
+    }
+
+    if (childSelect) {
+      childSelect.innerHTML = optionsHtml;
+      childSelect.onchange = function () {
+        setStudent(this.value);
+      };
+    }
+  }
+
+  function setStudent(studentId) {
+    currentStudentId = studentId;
+    var student = getActiveStudent();
+
+    // If current center is not enrolled by this student, revert to 'all'
+    if (currentCenterId !== 'all' && (student.enrolled_centers || []).indexOf(currentCenterId) === -1) {
+      currentCenterId = 'all';
+    }
+
+    updateSidebarProfile();
+    renderStudentSelector();
+    renderCenterSelector();
+    showToast('Active profile set to ' + student.name, 'info', 2000);
+    handleRouting();
+  }
+
+  function openAddStudentModal() {
+    var students = STATE.students || [];
+    if (students.length >= 5) {
+      showToast('Maximum 5 student profiles reached for this household account.', 'warning', 3500);
+      return;
+    }
+
+    var centers = STATE.centers || [];
+    var centerCheckboxes = centers.map(function (c) {
+      return '<label style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer;">' +
+        '<input type="checkbox" name="addStudentCenters" value="' + c.id + '" checked style="accent-color:var(--primary);">' +
+        '<span><strong>' + c.name + '</strong> (' + c.subjects.join(', ') + ')</span>' +
+      '</label>';
+    }).join('');
+
+    var modalHtml =
+      '<form id="formAddStudent" style="display:flex; flex-direction:column; gap:14px;">' +
+        '<div>' +
+          '<label class="form-label">Student Full Name *</label>' +
+          '<input type="text" id="addStudentName" class="form-input" required placeholder="e.g. Kabir Mehta">' +
+        '</div>' +
+        '<div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">' +
+          '<div>' +
+            '<label class="form-label">Grade / Class *</label>' +
+            '<select id="addStudentClass" class="form-input" required>' +
+              '<option value="Class 8">Class 8</option>' +
+              '<option value="Class 9">Class 9</option>' +
+              '<option value="Class 10" selected>Class 10</option>' +
+              '<option value="Class 11">Class 11</option>' +
+              '<option value="Class 12">Class 12</option>' +
+            '</select>' +
+          '</div>' +
+          '<div>' +
+            '<label class="form-label">Academic Board</label>' +
+            '<select id="addStudentBoard" class="form-input">' +
+              '<option value="CBSE">CBSE</option>' +
+              '<option value="ICSE">ICSE</option>' +
+              '<option value="State Board">State Board</option>' +
+            '</select>' +
+          '</div>' +
+        '</div>' +
+        '<div>' +
+          '<label class="form-label">Link Initial Coaching Centers &amp; Faculties:</label>' +
+          '<div style="display:flex; flex-direction:column; gap:8px; background:var(--surface-muted); padding:10px 14px; border-radius:var(--radius-sm); border:1px solid var(--border);">' +
+            centerCheckboxes +
+          '</div>' +
+        '</div>' +
+        '<div style="display:flex; justify-content:flex-end; gap:10px; margin-top:8px;">' +
+          '<button type="button" class="btn btn-secondary" id="btnCancelAddStudent">Cancel</button>' +
+          '<button type="submit" class="btn btn-primary">Create Profile (' + (students.length + 1) + '/5)</button>' +
+        '</div>' +
+      '</form>';
+
+    var closeModal = openModal({
+      title: 'Add Student Profile (Profile ' + (students.length + 1) + ' of 5)',
+      body: modalHtml,
+      onReady: function (overlay) {
+        var form = overlay.querySelector('#formAddStudent');
+        var cancel = overlay.querySelector('#btnCancelAddStudent');
+        if (cancel) cancel.onclick = closeModal;
+
+        if (form) {
+          form.onsubmit = function (e) {
+            e.preventDefault();
+            var name = document.getElementById('addStudentName').value.trim();
+            var cls = document.getElementById('addStudentClass').value;
+            var board = document.getElementById('addStudentBoard').value;
+
+            var checkedBoxes = overlay.querySelectorAll('input[name="addStudentCenters"]:checked');
+            var selectedCenterIds = [];
+            checkedBoxes.forEach(function (cb) { selectedCenterIds.push(cb.value); });
+            if (selectedCenterIds.length === 0) selectedCenterIds = ['center-1'];
+
+            var initials = name.split(' ').map(function (w) { return w[0]; }).join('').substring(0, 2).toUpperCase() || 'ST';
+            var newId = 'student-' + Date.now();
+            var rollNum = 'SA-' + (100 + STATE.students.length + 1);
+
+            var newStudent = {
+              id: newId,
+              name: name,
+              roll: rollNum,
+              class: cls,
+              board: board,
+              dob: '2011-05-18',
+              phone: '+91 99887 00000',
+              parent_name: 'Sunita Mehta',
+              parent_phone: '+91 98765 11223',
+              photo_initials: initials,
+              avatar_bg: 'linear-gradient(135deg, #800020, #D97706)',
+              enrolled_centers: selectedCenterIds,
+              points: 100,
+              streak: 1
+            };
+
+            STATE.students.push(newStudent);
+            Store.set('vs_students', STATE.students);
+            closeModal();
+            showToast('🎉 Student profile created for ' + name + '!', 'success', 3500);
+            setStudent(newId);
+          };
+        }
+      }
+    });
+  }
+
+  // ─── 8. MULTI-COACHING & TEACHER SWITCHING + JOINING ────────────────────────
+  function renderCenterSelector() {
+    var select = document.getElementById('sidebarCenterSelect');
+    if (!select) return;
+
+    var student = getActiveStudent();
+    var enrolled = getStudentEnrolledCenters(student.id);
+
+    var html = '<option value="all"' + (currentCenterId === 'all' ? ' selected' : '') + '>🌟 All Enrolled Centers (' + enrolled.length + ')</option>';
+    enrolled.forEach(function (c) {
+      html += '<option value="' + c.id + '"' + (c.id === currentCenterId ? ' selected' : '') + '>🏛️ ' + c.name + ' (' + c.subjects.join(', ') + ')</option>';
+    });
+
+    select.innerHTML = html;
+    select.onchange = function () {
+      currentCenterId = this.value;
+      showToast(currentCenterId === 'all' ? 'Showing unified view across all enrolled centers' : 'Filtered to ' + getActiveCenter().name, 'info', 2000);
+      handleRouting();
+    };
+  }
+
+  function openJoinCenterModal() {
+    var student = getActiveStudent();
+    var centers = STATE.centers || [];
+
+    var codePillsHtml = centers.map(function (c) {
+      return '<button type="button" class="code-pill" data-code="' + c.code + '">' +
+        '<span>' + c.logo_text + '</span> <strong>' + c.code + '</strong> ' +
+        '<span class="text-xs text-muted">(' + c.name.split(' ')[0] + ')</span>' +
+      '</button>';
+    }).join(' ');
+
+    var modalHtml =
+      '<div style="display:flex; flex-direction:column; gap:14px;">' +
+        '<p class="text-sm text-secondary">' +
+          'Enter the 6-character Teacher or Coaching Center Code to link <strong>' + student.name + '</strong> with their curriculum, timetable, attendance, and fee ledger.' +
+        '</p>' +
+        '<div>' +
+          '<label class="form-label">Available Demo Faculty / Academy Codes (Click to auto-fill):</label>' +
+          '<div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px;">' +
+            codePillsHtml +
+          '</div>' +
+        '</div>' +
+        '<form id="formJoinCenter">' +
+          '<div style="display:flex; gap:10px; margin-bottom:12px;">' +
+            '<input type="text" id="joinCenterCodeInput" class="form-input" placeholder="e.g. STLR10, APEX99, ZEN77" maxlength="10" style="font-family:var(--font-mono); font-weight:700; text-transform:uppercase;" required>' +
+            '<button type="button" class="btn btn-secondary" id="btnPreviewCode">Preview</button>' +
+          '</div>' +
+          '<div id="joinCodePreviewContainer" style="display:none; background:var(--surface-muted); border:1px solid var(--border); border-radius:var(--radius-sm); padding:12px; margin-bottom:14px;"></div>' +
+          '<div style="display:flex; justify-content:flex-end; gap:10px;">' +
+            '<button type="button" class="btn btn-secondary" id="btnCancelJoinCenter">Cancel</button>' +
+            '<button type="submit" class="btn btn-primary">Join Teacher / Center</button>' +
+          '</div>' +
+        '</form>' +
+      '</div>';
+
+    var closeModal = openModal({
+      title: 'Join a Teacher or Coaching Center',
+      body: modalHtml,
+      onReady: function (overlay) {
+        var input = overlay.querySelector('#joinCenterCodeInput');
+        var previewBox = overlay.querySelector('#joinCodePreviewContainer');
+        var form = overlay.querySelector('#formJoinCenter');
+        var cancel = overlay.querySelector('#btnCancelJoinCenter');
+        if (cancel) cancel.onclick = closeModal;
+
+        var updatePreview = function (code) {
+          code = (code || '').trim().toUpperCase();
+          var found = centers.find(function (c) { return c.code.toUpperCase() === code; });
+          if (found) {
+            previewBox.style.display = 'block';
+            var isAlready = (student.enrolled_centers || []).indexOf(found.id) !== -1;
+            previewBox.innerHTML =
+              '<div style="display:flex; align-items:center; gap:12px;">' +
+                '<div class="teacher-logo-badge" style="background:' + found.color + '; width:38px; height:38px; font-size:13px;">' + found.logo_text + '</div>' +
+                '<div style="flex:1;">' +
+                  '<div class="fw-700 text-sm">' + found.name + ' (' + found.type + ')</div>' +
+                  '<div class="text-xs text-secondary">' + found.teacher_name + ' &bull; ' + found.subjects.join(', ') + ' &bull; ₹' + found.monthly_fee + '/mo</div>' +
+                '</div>' +
+                (isAlready ? '<span class="badge badge-success">Already Linked</span>' : '<span class="badge badge-accent">Ready to Join</span>') +
+              '</div>';
+          } else {
+            previewBox.style.display = 'none';
+          }
+        };
+
+        var pills = overlay.querySelectorAll('.code-pill');
+        pills.forEach(function (pill) {
+          pill.onclick = function () {
+            var code = this.getAttribute('data-code');
+            if (input) {
+              input.value = code;
+              updatePreview(code);
+            }
+          };
+        });
+
+        if (input) {
+          input.oninput = function () { updatePreview(this.value); };
+        }
+
+        var previewBtn = overlay.querySelector('#btnPreviewCode');
+        if (previewBtn) {
+          previewBtn.onclick = function () { updatePreview(input ? input.value : ''); };
+        }
+
+        if (form) {
+          form.onsubmit = function (e) {
+            e.preventDefault();
+            var code = input.value.trim().toUpperCase();
+            var found = centers.find(function (c) { return c.code.toUpperCase() === code; });
+            if (!found) {
+              showToast('Invalid faculty code. Click one of the demo chips above.', 'error', 3500);
+              return;
+            }
+
+            if (!student.enrolled_centers) student.enrolled_centers = [];
+            if (student.enrolled_centers.indexOf(found.id) !== -1) {
+              showToast(student.name + ' is already enrolled in ' + found.name, 'info', 3000);
+              currentCenterId = found.id;
+              closeModal();
+              renderCenterSelector();
+              handleRouting();
+              return;
+            }
+
+            student.enrolled_centers.push(found.id);
+            Store.set('vs_students', STATE.students);
+            currentCenterId = found.id;
+            closeModal();
+            showToast('🎉 Successfully linked with ' + found.name + '!', 'success', 3500);
+            renderCenterSelector();
+            handleRouting();
+          };
+        }
+      }
+    });
+  }
+
+  // ─── 9. TEACHER & COACHING HERO CARD COMPONENT ─────────────────────────────
+  function renderTeacherHeroCard(containerId, extraHtml) {
+    var el = document.getElementById(containerId);
+    if (!el) return;
+
+    var activeCenter = getActiveCenter();
+    var student = getActiveStudent();
+    var enrolled = getStudentEnrolledCenters(student.id);
+
+    if (!activeCenter) {
+      // Unified Multi-Coaching Hub View
+      var centerPills = enrolled.map(function (c) {
+        return '<span class="center-tag" style="border-color:' + c.color + '; color:' + c.color + ';">🏛️ ' + c.name + '</span>';
+      }).join(' ');
+
+      el.innerHTML =
+        '<div class="teacher-hero-card" style="border-left-color: var(--accent);">' +
+          '<div class="teacher-hero-info">' +
+            '<div class="teacher-logo-badge" style="background: linear-gradient(135deg, var(--accent), #B45309);">🌟</div>' +
+            '<div>' +
+              '<div class="teacher-hero-title">Unified Multi-Coaching Academic Hub</div>' +
+              '<div class="teacher-hero-sub">' +
+                '<span>Linked with <strong>' + enrolled.length + ' Faculties &amp; Academies</strong></span> &bull; ' +
+                '<span>Student: <strong>' + student.name + ' (' + student.class + ')</strong></span>' +
+              '</div>' +
+              '<div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;">' + centerPills + '</div>' +
+            '</div>' +
+          '</div>' +
+          '<div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">' +
+            (extraHtml || '') +
+            '<button type="button" class="btn btn-secondary btn-sm" id="btnHeroJoinCenter">' +
+              '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px; height:14px;"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>' +
+              'Join Teacher / Center' +
+            '</button>' +
+          '</div>' +
+        '</div>';
+
+      var joinBtn = el.querySelector('#btnHeroJoinCenter');
+      if (joinBtn) joinBtn.onclick = openJoinCenterModal;
+
+    } else {
+      // Specific Teacher / Coaching Center View
+      el.innerHTML =
+        '<div class="teacher-hero-card" style="border-left-color:' + (activeCenter.color || 'var(--primary)') + ';">' +
+          '<div class="teacher-hero-info">' +
+            '<div class="teacher-logo-badge" style="background:' + (activeCenter.color || 'var(--primary)') + ';">' + (activeCenter.logo_text || 'VS') + '</div>' +
+            '<div>' +
+              '<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">' +
+                '<span class="teacher-hero-title">' + activeCenter.name + '</span>' +
+                '<span class="badge badge-primary" style="font-size:10px;">' + activeCenter.type + '</span>' +
+                '<span class="badge badge-neutral" style="font-size:10px; font-family:var(--font-mono);">Code: ' + activeCenter.code + '</span>' +
+              '</div>' +
+              '<div class="teacher-hero-sub">' +
+                '<span>Faculty Head: <strong>' + activeCenter.teacher_name + '</strong></span> &bull; ' +
+                '<span>Subjects: <strong>' + activeCenter.subjects.join(', ') + '</strong></span> &bull; ' +
+                '<span>Fee: <strong>₹' + activeCenter.monthly_fee.toLocaleString() + '/mo</strong></span>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+          '<div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">' +
+            (extraHtml || '') +
+            '<button type="button" class="btn btn-secondary btn-sm" id="btnHeroViewAll">View All Centers</button>' +
+          '</div>' +
+        '</div>';
+
+      var viewAllBtn = el.querySelector('#btnHeroViewAll');
+      if (viewAllBtn) {
+        viewAllBtn.onclick = function () {
+          currentCenterId = 'all';
+          renderCenterSelector();
+          handleRouting();
+        };
+      }
+    }
+  }
+
+  // ─── 10. ROUTER & ACTIVE LINK HIGHLIGHTS ──────────────────────────────────
   var validRoutes = [
     'home', 'attendance', 'fees', 'timetable', 'focus',
     'labs', 'videos', 'tests', 'points', 'marksheet', 'verify', 'settings'
@@ -229,7 +635,7 @@
       route = hash.split('/')[0];
     }
 
-    // Close mobile sidebar if open
+    // Dismiss mobile drawer if open
     var appSidebar = document.getElementById('appSidebar');
     var sidebarBackdrop = document.getElementById('sidebarBackdrop');
     var hamburger = document.getElementById('hamburger');
@@ -237,7 +643,7 @@
     if (sidebarBackdrop) sidebarBackdrop.classList.remove('active');
     if (hamburger) hamburger.setAttribute('aria-expanded', 'false');
 
-    // Hide all views
+    // Hide all view panels
     var views = document.querySelectorAll('.view');
     views.forEach(function (v) {
       v.classList.remove('active');
@@ -257,7 +663,7 @@
     updateNavActiveState(route);
     window.scrollTo(0, 0);
 
-    // Call page-specific render controller
+    // Call page-specific controller
     switch (route) {
       case 'home':
         renderHomeView();
@@ -319,15 +725,17 @@
 
     if (avatar) avatar.textContent = student.photo_initials || 'ST';
     if (name) name.textContent = student.name;
-    if (roll) {
-      var batchName = student.batch_id === 'batch-2' ? 'Class 9 Foundation' : 'Class 10 Board Prep';
-      roll.textContent = 'Roll: ' + student.roll + ' • ' + batchName;
-    }
+    if (roll) roll.textContent = 'Roll: ' + student.roll + ' • ' + (student.class || 'Class 10');
 
     if (feeBadge) {
       var studentFees = (STATE.fees || []).filter(function (f) {
-        return f.student_id === currentStudentId;
+        var matchStudent = f.student_id === currentStudentId;
+        var matchCenter = currentCenterId === 'all'
+          ? (student.enrolled_centers || []).indexOf(f.center_id) !== -1
+          : f.center_id === currentCenterId;
+        return matchStudent && matchCenter;
       });
+
       var hasPending = studentFees.some(function (f) { return f.status === 'pending'; });
       if (hasPending) {
         feeBadge.style.display = 'inline-block';
@@ -341,36 +749,25 @@
     }
   }
 
-  // ─── 7. PAGE: HOME / DASHBOARD ─────────────────────────────────────────────
+  // ─── 11. PAGE: HOME / DASHBOARD ────────────────────────────────────────────
   function renderHomeView() {
     var student = getActiveStudent();
     updateSidebarProfile();
+    renderStudentSelector();
+    renderCenterSelector();
+    renderTeacherHeroCard('homeTeacherHeroContainer');
+
     var parentBanner = document.getElementById('parentBanner');
     var studentHeader = document.getElementById('studentHeader');
     var homeStatsGrid = document.getElementById('homeStatsGrid');
     var homeDashboardGrid = document.getElementById('homeDashboardGrid');
     var homeParentChildrenView = document.getElementById('homeParentChildrenView');
-    var childSelect = document.getElementById('childSelect');
-
-    // Populate Parent Child Selector
-    if (childSelect && childSelect.options.length === 0) {
-      childSelect.innerHTML = (DATA.students || []).map(function (s) {
-        return '<option value="' + s.id + '"' + (s.id === currentStudentId ? ' selected' : '') + '>' + s.name + ' (' + s.roll + ')</option>';
-      }).join('');
-
-      childSelect.addEventListener('change', function () {
-        currentStudentId = this.value;
-        updateSidebarProfile();
-        showToast('Switched profile to ' + getActiveStudent().name, 'info', 2000);
-        renderHomeView();
-      });
-    }
 
     if (isParentMode) {
       if (parentBanner) parentBanner.style.display = 'flex';
       var parentBannerText = document.getElementById('parentBannerText');
       if (parentBannerText) {
-        parentBannerText.textContent = 'Welcome, ' + student.parent_name + '. Monitoring academic growth for Class 10.';
+        parentBannerText.textContent = 'Welcome, ' + student.parent_name + '. Monitoring household academic progress across multiple tuitions.';
       }
     } else {
       if (parentBanner) parentBanner.style.display = 'none';
@@ -387,39 +784,47 @@
     var dateSubtitleEl = document.getElementById('homeDateSubtitle');
     if (dateSubtitleEl) {
       var dateStr = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' });
-      dateSubtitleEl.textContent = dateStr + ' • Class 10 Morning Batch • ' + (DATA.center ? DATA.center.name : 'Stellar Academy');
+      var centerTitle = currentCenterId === 'all' ? 'Multi-Coaching Hub (' + (student.enrolled_centers || []).length + ' Joined Faculties)' : getActiveCenter().name;
+      dateSubtitleEl.textContent = dateStr + ' • ' + (student.class || 'Class 10') + ' (' + (student.board || 'CBSE') + ') • ' + centerTitle;
     }
 
     // Calculate Attendance % this month (October 2025)
     var studentAtt = (STATE.attendance || []).filter(function (a) {
-      return a.student_id === currentStudentId && a.date.indexOf('2025-10') === 0;
+      var matchStudent = a.student_id === currentStudentId;
+      var matchCenter = currentCenterId === 'all' ? (student.enrolled_centers || []).indexOf(a.center_id) !== -1 : a.center_id === currentCenterId;
+      return matchStudent && matchCenter && a.date.indexOf('2025-10') === 0;
     });
+
     var presentCount = studentAtt.filter(function (a) { return a.status === 'present' || a.status === 'late'; }).length;
-    var attPct = studentAtt.length > 0 ? Math.round((presentCount / studentAtt.length) * 100) : 88;
+    var attPct = studentAtt.length > 0 ? Math.round((presentCount / studentAtt.length) * 100) : 89;
 
     var attPctEl = document.getElementById('homeAttPct');
     var attBarEl = document.getElementById('homeAttBar');
     if (attPctEl) attPctEl.textContent = attPct + '%';
     if (attBarEl) attBarEl.style.width = attPct + '%';
 
-    // Fee Status
-    var pendingFee = (STATE.fees || []).find(function (f) {
-      return f.student_id === currentStudentId && f.status === 'pending';
+    // Pending Tuition Fees calculation
+    var relevantFees = (STATE.fees || []).filter(function (f) {
+      var matchStudent = f.student_id === currentStudentId;
+      var matchCenter = currentCenterId === 'all' ? (student.enrolled_centers || []).indexOf(f.center_id) !== -1 : f.center_id === currentCenterId;
+      return matchStudent && matchCenter && f.status === 'pending';
     });
+
+    var totalPending = relevantFees.reduce(function (sum, item) { return sum + item.amount; }, 0);
     var homeFeeStatus = document.getElementById('homeFeeStatus');
     var homeFeeLabel = document.getElementById('homeFeeLabel');
     var homeFeeBadge = document.getElementById('homeFeeBadge');
 
-    if (pendingFee) {
-      if (homeFeeStatus) homeFeeStatus.textContent = '₹' + pendingFee.amount.toLocaleString();
-      if (homeFeeLabel) homeFeeLabel.textContent = pendingFee.month + ' Due';
+    if (totalPending > 0) {
+      if (homeFeeStatus) homeFeeStatus.textContent = '₹' + totalPending.toLocaleString();
+      if (homeFeeLabel) homeFeeLabel.textContent = currentCenterId === 'all' ? 'Due Across ' + relevantFees.length + ' Centers' : relevantFees[0].month + ' Due';
       if (homeFeeBadge) {
         homeFeeBadge.className = 'badge badge-warning';
-        homeFeeBadge.textContent = 'Due ' + pendingFee.due_date;
+        homeFeeBadge.textContent = 'Due Nov 2025';
       }
     } else {
       if (homeFeeStatus) homeFeeStatus.textContent = '₹0';
-      if (homeFeeLabel) homeFeeLabel.textContent = 'All Fees Cleared';
+      if (homeFeeLabel) homeFeeLabel.textContent = 'All Tuition Dues Cleared';
       if (homeFeeBadge) {
         homeFeeBadge.className = 'badge badge-success';
         homeFeeBadge.textContent = 'Fully Paid';
@@ -428,35 +833,42 @@
 
     // Streak & Points
     var streakEl = document.getElementById('homeStreak');
-    if (streakEl) streakEl.textContent = STATE.streak + ' Days';
+    if (streakEl) streakEl.textContent = (student.streak || STATE.streak) + ' Days';
     var pointsEl = document.getElementById('homePoints');
-    if (pointsEl) pointsEl.textContent = STATE.points.toLocaleString();
+    if (pointsEl) pointsEl.textContent = (student.points || STATE.points).toLocaleString();
 
     // Today's classes from timetable
     var classesList = document.getElementById('homeClassesList');
     if (classesList) {
       var dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
       var todayDay = dayNames[new Date().getDay()];
-      if (todayDay === 'Sun') todayDay = 'Mon'; // Sunday fallback for demo
+      if (todayDay === 'Sun') todayDay = 'Mon'; // Sunday fallback for rich demo schedule
 
       var todayBadge = document.getElementById('homeTodayDayBadge');
       if (todayBadge) todayBadge.textContent = todayDay + ' Schedule';
 
       var todaysSchedule = (DATA.timetable || []).filter(function (t) {
-        return t.day_of_week === todayDay;
+        var matchCenter = currentCenterId === 'all' ? (student.enrolled_centers || []).indexOf(t.center_id) !== -1 : t.center_id === currentCenterId;
+        return t.day_of_week === todayDay && matchCenter;
       });
 
       if (todaysSchedule.length === 0) {
-        classesList.innerHTML = '<div class="text-sm text-secondary p-12">No classes scheduled for today. Take time to revise!</div>';
+        classesList.innerHTML = '<div class="text-sm text-secondary p-12">No classes scheduled for today from enrolled faculties. Take time for independent revision!</div>';
       } else {
-        classesList.innerHTML = todaysSchedule.map(function (item, idx) {
-          var isDone = idx === 0;
+        classesList.innerHTML = todaysSchedule.map(function (c) {
+          var centerObj = getCenterById(c.center_id);
           return (
-            '<div style="display:flex; align-items:center; gap:14px; padding:12px 14px; background:var(--surface-muted); border-radius:var(--radius-sm); border-left:3px solid ' + (isDone ? 'var(--accent)' : 'var(--primary)') + '; margin-bottom:8px;">' +
-              '<div style="font-size:12px; font-weight:700; color:var(--text-secondary); width:85px; flex-shrink:0;">' + item.start_time + ' - ' + item.end_time + '</div>' +
-              '<div style="flex:1;">' +
-                '<div style="font-size:14px; font-weight:700; color:var(--text-main);">' + item.subject + ' ' + (isDone ? '<span class="badge badge-success">Completed</span>' : '<span class="badge badge-primary">Next Up</span>') + '</div>' +
-                '<div style="font-size:12px; color:var(--text-secondary); margin-top:2px;">' + item.teacher + ' &bull; ' + (item.room || 'Room 101') + '</div>' +
+            '<div class="class-item">' +
+              '<div class="class-time">' +
+                '<span class="class-time-start">' + c.start_time + '</span>' +
+                '<span class="class-time-end">' + c.end_time + '</span>' +
+              '</div>' +
+              '<div class="class-details">' +
+                '<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">' +
+                  '<span class="class-subject">' + c.subject + '</span>' +
+                  '<span class="center-tag" style="border-color:' + centerObj.color + '; color:' + centerObj.color + ';">' + centerObj.name + '</span>' +
+                '</div>' +
+                '<div class="class-teacher">' + c.teacher + ' &bull; ' + c.room + '</div>' +
               '</div>' +
             '</div>'
           );
@@ -464,122 +876,170 @@
       }
     }
 
-    // Upcoming Next Test Card
+    // Next assessment
     var nextTestContainer = document.getElementById('homeNextTestContainer');
     if (nextTestContainer) {
-      var upcomingTest = (DATA.tests || [])[0] || {
-        name: 'Unit Assessment 3',
-        subject: 'Maths & Physics',
-        date: '2025-10-25',
-        total_marks: 50,
-        duration_min: 90
-      };
-      nextTestContainer.innerHTML =
-        '<div style="display:flex; justify-content:space-between; align-items:center;">' +
-          '<div>' +
-            '<h3 class="text-base fw-700">' + upcomingTest.name + '</h3>' +
-            '<p class="text-sm text-secondary">' + upcomingTest.subject + ' • ' + upcomingTest.duration_min + ' mins</p>' +
-            '<div class="text-xs text-muted" style="margin-top:4px;">Scheduled Date: ' + upcomingTest.date + '</div>' +
+      var upcomingTests = (STATE.tests || []).filter(function (t) {
+        var matchStudent = t.student_id === currentStudentId;
+        var matchCenter = currentCenterId === 'all' ? (student.enrolled_centers || []).indexOf(t.center_id) !== -1 : t.center_id === currentCenterId;
+        return matchStudent && matchCenter;
+      });
+
+      var nextTest = upcomingTests[upcomingTests.length - 1];
+      if (nextTest) {
+        var tCenter = getCenterById(nextTest.center_id);
+        nextTestContainer.innerHTML =
+          '<div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">' +
+            '<div>' +
+              '<h3 class="text-base fw-700" style="color:var(--text-main);">' + nextTest.name + '</h3>' +
+              '<p class="text-xs text-muted">Subject: ' + nextTest.subject + ' &bull; ' + tCenter.name + '</p>' +
+            '</div>' +
+            '<span class="badge badge-accent">Recent: ' + nextTest.marks_obtained + '/' + nextTest.total_marks + ' pts</span>' +
           '</div>' +
-          '<div style="text-align:right;">' +
-            '<span class="badge badge-warning">Max ' + upcomingTest.total_marks + ' Marks</span>' +
-          '</div>' +
-        '</div>';
+          '<div class="text-xs text-secondary mb-12">Topics Evaluated: ' + nextTest.topics_tested.join(', ') + '</div>' +
+          '<a href="#tests" class="btn btn-secondary btn-sm" style="width:100%;">Take New Practice Challenge</a>';
+      } else {
+        nextTestContainer.innerHTML = '<div class="text-sm text-secondary">No assessments recorded for this faculty yet.</div>';
+      }
     }
 
-    // Subject Syllabus Rings
+    // Syllabus Completion Progress Rings
     var ringsContainer = document.getElementById('homeSubjectRings');
     if (ringsContainer) {
-      var subjects = ['Maths', 'Physics', 'Chemistry', 'Biology', 'English'];
-      var ringColors = {
-        'Maths': '#4F46E5',
-        'Physics': '#3B82F6',
-        'Chemistry': '#F59E0B',
-        'Biology': '#10B981',
-        'English': '#EC4899'
-      };
+      var activeTopics = (STATE.syllabus || []).filter(function (s) {
+        return currentCenterId === 'all' ? (student.enrolled_centers || []).indexOf(s.center_id) !== -1 : s.center_id === currentCenterId;
+      });
 
-      ringsContainer.innerHTML = subjects.map(function (subj) {
-        var sylTopics = (STATE.syllabus || []).filter(function (s) { return s.subject === subj; });
-        var coveredCount = sylTopics.filter(function (s) { return s.status === 'covered'; }).length;
-        var pct = sylTopics.length > 0 ? Math.round((coveredCount / sylTopics.length) * 100) : 60;
-        var color = ringColors[subj] || '#4F46E5';
+      var subjectsList = [];
+      activeTopics.forEach(function (s) {
+        if (subjectsList.indexOf(s.subject) === -1) subjectsList.push(s.subject);
+      });
+      if (subjectsList.length === 0) subjectsList = ['Maths', 'Physics', 'Chemistry'];
+
+      ringsContainer.innerHTML = subjectsList.map(function (sub) {
+        var subTopics = activeTopics.filter(function (t) { return t.subject === sub; });
+        var coveredCount = subTopics.filter(function (t) { return t.status === 'covered'; }).length;
+        var pct = subTopics.length > 0 ? Math.round((coveredCount / subTopics.length) * 100) : 75;
 
         var radius = 28;
-        var circumference = 2 * Math.PI * radius;
-        var offset = circumference - (pct / 100) * circumference;
+        var circum = 2 * Math.PI * radius;
+        var offset = circum - (pct / 100) * circum;
 
         return (
-          '<div class="progress-ring-container">' +
-            '<svg width="72" height="72" class="progress-ring" viewBox="0 0 72 72">' +
-              '<circle class="progress-ring-bg" cx="36" cy="36" r="' + radius + '" stroke-width="6"/>' +
-              '<circle class="progress-ring-fill" cx="36" cy="36" r="' + radius + '" stroke-width="6" ' +
-                'stroke="' + color + '" stroke-dasharray="' + circumference + '" stroke-dashoffset="' + offset + '"/>' +
-              '<text x="36" y="40" text-anchor="middle" font-size="12" font-weight="700" fill="currentColor" transform="rotate(90 36 36)">' + pct + '%</text>' +
-            '</svg>' +
-            '<div class="progress-ring-label">' + subj + '</div>' +
+          '<div class="progress-ring-card">' +
+            '<div class="progress-ring-wrapper">' +
+              '<svg class="progress-ring" width="70" height="70">' +
+                '<circle class="progress-ring-circle-bg" stroke="var(--border)" stroke-width="6" fill="transparent" r="' + radius + '" cx="35" cy="35"/>' +
+                '<circle class="progress-ring-circle" stroke="var(--primary)" stroke-width="6" fill="transparent" r="' + radius + '" cx="35" cy="35" style="stroke-dasharray:' + circum + '; stroke-dashoffset:' + offset + '; stroke-linecap:round;"/>' +
+              '</svg>' +
+              '<span class="progress-ring-text">' + pct + '%</span>' +
+            '</div>' +
+            '<span class="progress-ring-label">' + sub + '</span>' +
           '</div>'
         );
       }).join('');
     }
 
-    // Parent Multi-Child View Render
+    // Parent Mode: Multi-Child Household Overview
     if (homeParentChildrenView) {
       if (isParentMode) {
         homeParentChildrenView.classList.add('visible');
-        homeParentChildrenView.innerHTML = (DATA.students || []).map(function (child) {
+        var allStudents = STATE.students || DATA.students || [];
+
+        var childCardsHtml = allStudents.map(function (child) {
           var isCurrent = child.id === currentStudentId;
-          var childFees = (STATE.fees || []).filter(function (f) { return f.student_id === child.id && f.status === 'pending'; });
-          var childPending = childFees.length > 0 ? '₹' + childFees[0].amount : 'Paid';
+          var childEnrolled = getStudentEnrolledCenters(child.id);
+
+          var pendingChildFees = (STATE.fees || []).filter(function (f) {
+            return f.student_id === child.id && f.status === 'pending';
+          });
+          var totalChildPending = pendingChildFees.reduce(function (acc, f) { return acc + f.amount; }, 0);
+
+          var childAtt = (STATE.attendance || []).filter(function (a) {
+            return a.student_id === child.id && a.date.indexOf('2025-10') === 0;
+          });
+          var pCount = childAtt.filter(function (a) { return a.status === 'present' || a.status === 'late'; }).length;
+          var childAttPct = childAtt.length > 0 ? Math.round((pCount / childAtt.length) * 100) : 88;
+
+          var facultyBadges = childEnrolled.map(function (c) {
+            return '<span class="center-tag" style="border-color:' + c.color + '; color:' + c.color + '; font-size:10px;">🏛️ ' + c.name + '</span>';
+          }).join(' ');
 
           return (
-            '<div class="child-summary-card' + (isCurrent ? ' selected' : '') + '" data-student-id="' + child.id + '" style="' + (isCurrent ? 'border-color:var(--primary); background:var(--primary-subtle);' : '') + '">' +
-              '<div style="display:flex; justify-content:space-between; align-items:flex-start;">' +
-                '<div class="child-avatar" style="background:' + (child.avatar_bg || 'var(--primary)') + '">' + child.photo_initials + '</div>' +
-                (isCurrent ? '<span class="badge badge-primary">Active Profile</span>' : '<span class="badge badge-neutral">Switch</span>') +
+            '<div class="student-summary-card ' + (isCurrent ? 'active' : '') + '" data-child-id="' + child.id + '">' +
+              '<div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">' +
+                '<div style="display:flex; align-items:center; gap:12px;">' +
+                  '<div class="sidebar-avatar" style="background:' + (child.avatar_bg || 'var(--primary)') + '; width:40px; height:40px; font-size:14px;">' + (child.photo_initials || 'ST') + '</div>' +
+                  '<div>' +
+                    '<h3 class="text-base fw-700">' + child.name + '</h3>' +
+                    '<span class="text-xs text-muted">Roll: ' + child.roll + ' &bull; ' + child.class + ' (' + (child.board || 'CBSE') + ')</span>' +
+                  '</div>' +
+                '</div>' +
+                (isCurrent ? '<span class="badge badge-primary">Active Profile</span>' : '<button type="button" class="btn btn-secondary btn-xs btn-switch-child" data-child-id="' + child.id + '">Select</button>') +
               '</div>' +
-              '<div class="child-name" style="font-size:16px; font-weight:700; margin-top:8px;">' + child.name + '</div>' +
-              '<div class="child-stat-row">' +
-                '<span class="text-secondary">Roll Number:</span>' +
-                '<span class="fw-700">' + child.roll + '</span>' +
+              '<div style="margin-bottom:12px;">' +
+                '<div class="text-xs text-muted fw-700 uppercase mb-4">Enrolled Faculties &amp; Tuitions:</div>' +
+                '<div style="display:flex; flex-wrap:wrap; gap:5px;">' + facultyBadges + '</div>' +
               '</div>' +
-              '<div class="child-stat-row">' +
-                '<span class="text-secondary">Attendance:</span>' +
-                '<span class="fw-700" style="color:var(--accent);">' + (child.id === 'student-1' ? '88%' : '82%') + '</span>' +
-              '</div>' +
-              '<div class="child-stat-row">' +
-                '<span class="text-secondary">Fee Status:</span>' +
-                '<span class="fw-700" style="color:' + (childFees.length > 0 ? 'var(--error)' : 'var(--accent)') + ';">' + childPending + '</span>' +
-              '</div>' +
-              '<div class="child-stat-row">' +
-                '<span class="text-secondary">Study Points:</span>' +
-                '<span class="fw-700">' + child.points + ' pts</span>' +
+              '<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; padding:10px; background:var(--surface-muted); border-radius:var(--radius-sm);">' +
+                '<div>' +
+                  '<div class="text-xs text-muted uppercase">Attendance</div>' +
+                  '<div class="text-base fw-800" style="color:var(--accent);">' + childAttPct + '%</div>' +
+                '</div>' +
+                '<div>' +
+                  '<div class="text-xs text-muted uppercase">Pending Fees</div>' +
+                  '<div class="text-base fw-800" style="color:' + (totalChildPending > 0 ? 'var(--error)' : 'var(--accent)') + ';">' + (totalChildPending > 0 ? '₹' + totalChildPending.toLocaleString() : '₹0 (Paid)') + '</div>' +
+                '</div>' +
               '</div>' +
             '</div>'
           );
         }).join('');
 
-        var cards = homeParentChildrenView.querySelectorAll('.child-summary-card');
-        cards.forEach(function (card) {
-          card.addEventListener('click', function () {
-            var sid = this.getAttribute('data-student-id');
-            if (sid) {
-              currentStudentId = sid;
-              if (childSelect) childSelect.value = sid;
-              showToast('Switched view to ' + getActiveStudent().name, 'info', 2000);
-              renderHomeView();
+        // If fewer than 5 students, add a card to add another student profile
+        var addStudentCard = '';
+        if (allStudents.length < 5) {
+          addStudentCard =
+            '<div class="student-summary-card" style="border-style:dashed; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:160px; text-align:center;" id="btnParentAddStudent">' +
+              '<div style="font-size:32px; margin-bottom:8px;">➕</div>' +
+              '<h3 class="text-sm fw-700">Add Another Student Profile</h3>' +
+              '<p class="text-xs text-muted mb-12">Household account supports up to 5 children profiles.</p>' +
+              '<button type="button" class="btn btn-primary btn-sm">+ Create Student Profile (' + (allStudents.length + 1) + '/5)</button>' +
+            '</div>';
+        }
+
+        homeParentChildrenView.innerHTML =
+          '<div style="grid-column: 1 / -1; margin-bottom: 8px;">' +
+            '<h2 class="text-base fw-800" style="color:var(--text-main);">Household Children Academics &amp; Coaching Overview</h2>' +
+            '<p class="text-xs text-muted">Manage progress across all children and their joined tuition centers from one family account.</p>' +
+          '</div>' +
+          childCardsHtml + addStudentCard;
+
+        var childSelectBtns = homeParentChildrenView.querySelectorAll('.btn-switch-child, .student-summary-card[data-child-id]');
+        childSelectBtns.forEach(function (btn) {
+          btn.addEventListener('click', function (e) {
+            var cid = this.getAttribute('data-child-id');
+            if (cid && cid !== currentStudentId) {
+              setStudent(cid);
             }
           });
         });
+
+        var parentAddBtn = document.getElementById('btnParentAddStudent');
+        if (parentAddBtn) {
+          parentAddBtn.onclick = openAddStudentModal;
+        }
+
       } else {
         homeParentChildrenView.classList.remove('visible');
       }
     }
   }
 
-  // ─── 8. PAGE: ATTENDANCE ───────────────────────────────────────────────────
+  // ─── 12. PAGE: ATTENDANCE ──────────────────────────────────────────────────
   function renderAttendanceView() {
     var student = getActiveStudent();
+    renderTeacherHeroCard('attTeacherHeroContainer');
+
     var monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
     var monthLabel = document.getElementById('calMonthLabel');
     if (monthLabel) {
@@ -606,7 +1066,7 @@
     var presentCount = 0;
     var lateCount = 0;
     var absentCount = 0;
-    var totalSchoolDays = 0;
+    var totalDays = 0;
 
     for (var d = 1; d <= daysInMonth; d++) {
       var dateKey = currentYear + '-' + monthStr + '-' + String(d).padStart(2, '0');
@@ -614,7 +1074,11 @@
       var isSunday = checkDate.getDay() === 0;
 
       var dayRecords = (STATE.attendance || []).filter(function (a) {
-        return a.student_id === currentStudentId && a.date === dateKey;
+        var matchStudent = a.student_id === currentStudentId;
+        var matchCenter = currentCenterId === 'all'
+          ? (student.enrolled_centers || []).indexOf(a.center_id) !== -1
+          : a.center_id === currentCenterId;
+        return matchStudent && matchCenter && a.date === dateKey;
       });
 
       var dayClass = 'cal-day';
@@ -622,7 +1086,7 @@
       if (isSunday) {
         dayClass += ' cal-day-noclass';
       } else if (dayRecords.length > 0) {
-        totalSchoolDays++;
+        totalDays++;
         var status = dayRecords[0].status;
         if (status === 'present') {
           dayClass += ' cal-day-present';
@@ -648,104 +1112,104 @@
 
     grid.innerHTML = html;
 
-    var totalAttended = presentCount + lateCount;
-    var monthPct = totalSchoolDays > 0 ? Math.round((totalAttended / totalSchoolDays) * 100) : 0;
+    var summaryBadge = document.getElementById('calSummaryBadge');
+    var rate = totalDays > 0 ? Math.round(((presentCount + lateCount) / totalDays) * 100) : 90;
+    if (summaryBadge) summaryBadge.textContent = rate + '% Attendance';
 
-    var calSummaryBadge = document.getElementById('calSummaryBadge');
-    if (calSummaryBadge) {
-      calSummaryBadge.textContent = monthPct + '% Attendance';
+    // Subject breakdown
+    var subjectListContainer = document.getElementById('subjectAttList');
+    if (subjectListContainer) {
+      var filteredAtt = (STATE.attendance || []).filter(function (a) {
+        var matchStudent = a.student_id === currentStudentId;
+        var matchCenter = currentCenterId === 'all'
+          ? (student.enrolled_centers || []).indexOf(a.center_id) !== -1
+          : a.center_id === currentCenterId;
+        return matchStudent && matchCenter && a.date.indexOf(currentYear + '-' + monthStr) === 0;
+      });
+
+      var subCounts = {};
+      filteredAtt.forEach(function (a) {
+        if (!subCounts[a.subject]) subCounts[a.subject] = { total: 0, attended: 0, center_id: a.center_id };
+        subCounts[a.subject].total++;
+        if (a.status === 'present' || a.status === 'late') subCounts[a.subject].attended++;
+      });
+
+      var subKeys = Object.keys(subCounts);
+      if (subKeys.length === 0) {
+        subjectListContainer.innerHTML = '<div class="text-sm text-secondary">No subject attendance recorded for this month.</div>';
+      } else {
+        subjectListContainer.innerHTML = subKeys.map(function (sub) {
+          var item = subCounts[sub];
+          var pct = Math.round((item.attended / item.total) * 100);
+          var centerObj = getCenterById(item.center_id);
+          return (
+            '<div class="subject-att-item">' +
+              '<div class="subject-att-header">' +
+                '<span class="subject-att-name">' + sub + ' <small class="text-muted">(' + centerObj.name + ')</small></span>' +
+                '<span class="subject-att-pct">' + pct + '% (' + item.attended + '/' + item.total + ')</span>' +
+              '</div>' +
+              '<div class="progress-bar-track">' +
+                '<div class="progress-bar-fill ' + (pct >= 85 ? 'accent' : 'warning') + '" style="width:' + pct + '%;"></div>' +
+              '</div>' +
+            '</div>'
+          );
+        }).join('');
+      }
     }
 
-    var metricsContainer = document.getElementById('attendanceSummaryMetrics');
-    if (metricsContainer) {
-      metricsContainer.innerHTML =
-        '<h3 class="card-title mb-16">Monthly Statistics</h3>' +
-        '<div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:10px; text-align:center;">' +
-          '<div style="padding:12px; background:var(--accent-subtle); border-radius:var(--radius-sm); border:1px solid rgba(16,185,129,0.2);">' +
+    // Attendance summary metrics
+    var metricsEl = document.getElementById('attendanceSummaryMetrics');
+    if (metricsEl) {
+      metricsEl.innerHTML =
+        '<h3 class="text-sm fw-700 uppercase text-muted mb-12">Monthly Attendance Summary</h3>' +
+        '<div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; text-align:center;">' +
+          '<div style="background:var(--surface-muted); padding:10px; border-radius:var(--radius-sm);">' +
             '<div class="text-2xl fw-800" style="color:var(--accent);">' + presentCount + '</div>' +
             '<div class="text-xs text-muted">Present</div>' +
           '</div>' +
-          '<div style="padding:12px; background:var(--warning-bg); border-radius:var(--radius-sm); border:1px solid rgba(245,158,11,0.2);">' +
+          '<div style="background:var(--surface-muted); padding:10px; border-radius:var(--radius-sm);">' +
             '<div class="text-2xl fw-800" style="color:var(--warning);">' + lateCount + '</div>' +
             '<div class="text-xs text-muted">Late</div>' +
           '</div>' +
-          '<div style="padding:12px; background:var(--error-bg); border-radius:var(--radius-sm); border:1px solid rgba(239,68,68,0.2);">' +
+          '<div style="background:var(--surface-muted); padding:10px; border-radius:var(--radius-sm);">' +
             '<div class="text-2xl fw-800" style="color:var(--error);">' + absentCount + '</div>' +
             '<div class="text-xs text-muted">Absent</div>' +
           '</div>' +
-        '</div>' +
-        '<div class="text-xs text-secondary" style="margin-top:14px; text-align:center;">Academic sessions evaluated: ' + totalSchoolDays + '</div>';
+        '</div>';
     }
 
-    var subjectAttList = document.getElementById('subjectAttList');
-    if (subjectAttList) {
-      var subjects = ['Maths', 'Physics', 'Chemistry', 'Biology', 'English'];
-      subjectAttList.innerHTML = subjects.map(function (subj) {
-        var recs = (STATE.attendance || []).filter(function (a) {
-          return a.student_id === currentStudentId && a.subject === subj;
-        });
-        var p = recs.filter(function (a) { return a.status === 'present' || a.status === 'late'; }).length;
-        var sPct = recs.length > 0 ? Math.round((p / recs.length) * 100) : 85;
-
-        return (
-          '<div class="subject-att-row">' +
-            '<div class="subject-att-name">' + subj + '</div>' +
-            '<div class="subject-att-bar">' +
-              '<div class="progress-bar-track">' +
-                '<div class="progress-bar-fill' + (sPct < 75 ? ' error' : sPct < 85 ? ' warning' : ' accent') + '" style="width:' + sPct + '%;"></div>' +
-              '</div>' +
-            '</div>' +
-            '<div class="subject-att-pct">' + sPct + '%</div>' +
-          '</div>'
-        );
-      }).join('');
-    }
-
+    // Month navigation
     var prevBtn = document.getElementById('calPrevMonth');
     var nextBtn = document.getElementById('calNextMonth');
-
     if (prevBtn) {
       prevBtn.onclick = function () {
-        if (currentMonthIndex > 7) {
-          currentMonthIndex--;
-          renderAttendanceView();
-        } else {
-          showToast('Demo data covers August to October 2025', 'info', 2000);
-        }
+        currentMonthIndex = (currentMonthIndex - 1 + 12) % 12;
+        renderAttendanceView();
       };
     }
-
     if (nextBtn) {
       nextBtn.onclick = function () {
-        if (currentMonthIndex < 9) {
-          currentMonthIndex++;
-          renderAttendanceView();
-        } else {
-          showToast('Upcoming November records not yet finalized', 'info', 2000);
-        }
+        currentMonthIndex = (currentMonthIndex + 1) % 12;
+        renderAttendanceView();
       };
     }
 
-    // Simulate QR Scan Check-In
+    // Simulate QR Check-In
     var qrBtn = document.getElementById('btnQrScan');
     if (qrBtn) {
       qrBtn.onclick = function () {
-        var todayStr = currentYear + '-10-17';
-        var existing = (STATE.attendance || []).find(function (a) {
-          return a.student_id === currentStudentId && a.date === todayStr;
-        });
+        var todayStr = currentYear + '-10-18';
+        var targetCenterId = currentCenterId !== 'all' ? currentCenterId : ((student.enrolled_centers && student.enrolled_centers[0]) ? student.enrolled_centers[0] : 'center-1');
+        var centerObj = getCenterById(targetCenterId);
 
-        if (existing) {
-          existing.status = 'present';
-        } else {
-          STATE.attendance.push({
-            id: 'att-qr-' + Date.now(),
-            student_id: currentStudentId,
-            date: todayStr,
-            status: 'present',
-            subject: 'Maths'
-          });
-        }
+        STATE.attendance.push({
+          id: 'att-qr-' + Date.now(),
+          student_id: currentStudentId,
+          center_id: targetCenterId,
+          date: todayStr,
+          status: 'present',
+          subject: (centerObj.subjects && centerObj.subjects[0]) ? centerObj.subjects[0] : 'General'
+        });
 
         STATE.points += 10;
         STATE.points_history.unshift({
@@ -754,70 +1218,85 @@
           date: todayStr,
           action: 'attendance_qr',
           points: 10,
-          description: 'QR Code attendance verified on arrival'
+          description: 'QR attendance checked in at ' + centerObj.name
         });
 
         Store.set('vs_attendance', STATE.attendance);
         Store.set('vs_points', STATE.points);
         Store.set('vs_points_history', STATE.points_history);
 
-        showToast('✅ QR Attendance Confirmed! (+10 pts)', 'success', 3500);
+        showToast('✅ QR Attendance Confirmed at ' + centerObj.name + '! (+10 pts)', 'success', 3500);
         renderAttendanceView();
       };
     }
   }
 
-  // ─── 9. PAGE: FEES & PAYMENTS ──────────────────────────────────────────────
+  // ─── 13. PAGE: FEES & PAYMENTS ─────────────────────────────────────────────
   function renderFeesView() {
     var student = getActiveStudent();
+    renderTeacherHeroCard('feesTeacherHeroContainer');
+
     var tbody = document.getElementById('feesTableBody');
     var pendingDisplay = document.getElementById('feesPendingAmount');
     var pendingNotice = document.getElementById('feesPendingNotice');
     var btnPayPending = document.getElementById('btnPayPending');
 
     var studentFees = (STATE.fees || []).filter(function (f) {
-      return f.student_id === currentStudentId;
+      var matchStudent = f.student_id === currentStudentId;
+      var matchCenter = currentCenterId === 'all'
+        ? (student.enrolled_centers || []).indexOf(f.center_id) !== -1
+        : f.center_id === currentCenterId;
+      return matchStudent && matchCenter;
     });
 
-    var pendingItem = studentFees.find(function (f) { return f.status === 'pending'; });
+    var pendingFees = studentFees.filter(function (f) { return f.status === 'pending'; });
+    var totalPending = pendingFees.reduce(function (acc, f) { return acc + f.amount; }, 0);
 
     if (pendingDisplay) {
-      pendingDisplay.textContent = pendingItem ? '₹' + pendingItem.amount.toLocaleString() : '₹0';
-      pendingDisplay.style.color = pendingItem ? 'var(--error)' : 'var(--accent)';
+      pendingDisplay.textContent = totalPending > 0 ? '₹' + totalPending.toLocaleString() : '₹0';
+      pendingDisplay.style.color = totalPending > 0 ? 'var(--error)' : 'var(--accent)';
     }
 
     if (pendingNotice) {
-      pendingNotice.textContent = pendingItem
-        ? 'Pending for ' + pendingItem.month + ' due by ' + pendingItem.due_date
-        : 'All tuition installments are fully settled. No pending dues!';
+      if (totalPending > 0) {
+        pendingNotice.textContent = currentCenterId === 'all'
+          ? 'Outstanding balance across ' + pendingFees.length + ' coaching faculties due Nov 2025'
+          : 'Pending installment for ' + pendingFees[0].month + ' due by ' + pendingFees[0].due_date;
+      } else {
+        pendingNotice.textContent = 'All tuition fees are fully settled. No outstanding dues!';
+      }
     }
 
     if (btnPayPending) {
-      if (pendingItem) {
+      if (totalPending > 0) {
         btnPayPending.disabled = false;
+        btnPayPending.textContent = currentCenterId === 'all' ? 'Pay Next Due (₹' + pendingFees[0].amount.toLocaleString() + ')' : 'Pay Outstanding Fees';
         btnPayPending.onclick = function () {
-          openPaymentModal(pendingItem);
+          openPaymentModal(pendingFees[0]);
         };
       } else {
         btnPayPending.disabled = true;
+        btnPayPending.textContent = 'All Fees Settled';
       }
     }
 
     if (!tbody) return;
 
     if (studentFees.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted p-24">No fee records found for this student profile.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted p-24">No fee records found for this coaching selection.</td></tr>';
       return;
     }
 
     tbody.innerHTML = studentFees.map(function (fee) {
       var isPending = fee.status === 'pending';
+      var centerObj = getCenterById(fee.center_id);
       var statusBadge = isPending
         ? '<span class="badge badge-error">Pending</span>'
         : '<span class="badge badge-success">Settled</span>';
 
       return (
         '<tr class="' + (isPending ? 'table-row-highlight' : '') + '">' +
+          '<td><span class="center-tag" style="border-color:' + centerObj.color + '; color:' + centerObj.color + ';">🏛️ ' + centerObj.name + '</span></td>' +
           '<td class="fw-700">' + fee.month + '</td>' +
           '<td>' + fee.due_date + '</td>' +
           '<td class="fw-800">₹' + fee.amount.toLocaleString() + '</td>' +
@@ -855,48 +1334,69 @@
 
   function openPaymentModal(feeItem) {
     var student = getActiveStudent();
-    var modalBodyHtml =
-      '<div style="text-align:center; padding:10px 0;">' +
-        '<div class="badge badge-warning mb-12">Simulated Gateway &bull; Demo Prototype</div>' +
-        '<div class="text-xs text-muted uppercase fw-700">Amount Due</div>' +
-        '<div class="text-4xl fw-800 mb-16" style="color:var(--primary);">₹' + feeItem.amount.toLocaleString() + '</div>' +
-        '<div class="text-sm text-secondary mb-16">Payment for: <strong>' + feeItem.month + '</strong><br>Candidate: ' + student.name + ' (' + student.roll + ')</div>' +
-        '<div style="background:var(--surface-muted); border-radius:var(--radius-md); padding:16px; margin-bottom:16px; text-align:left; border:1px solid var(--border);">' +
-          '<div class="text-xs fw-700 text-muted uppercase mb-8">Choose Simulated Payment Mode:</div>' +
-          '<label style="display:flex; align-items:center; gap:10px; margin-bottom:10px; cursor:pointer; font-size:14px; font-weight:600;">' +
-            '<input type="radio" name="mockPayMode" value="Instant UPI" checked> Instant UPI (Google Pay / PhonePe / Paytm)' +
-          '</label>' +
-          '<label style="display:flex; align-items:center; gap:10px; margin-bottom:10px; cursor:pointer; font-size:14px; font-weight:600;">' +
-            '<input type="radio" name="mockPayMode" value="Net Banking"> Net Banking / IMPS Direct' +
-          '</label>' +
-          '<label style="display:flex; align-items:center; gap:10px; cursor:pointer; font-size:14px; font-weight:600;">' +
-            '<input type="radio" name="mockPayMode" value="Credit/Debit Card"> Debit / Credit Card' +
-          '</label>' +
+    var centerObj = getCenterById(feeItem.center_id);
+
+    var bodyHtml =
+      '<div style="display:flex; flex-direction:column; gap:16px;">' +
+        '<div style="background:var(--surface-muted); padding:14px; border-radius:var(--radius-sm); border:1px solid var(--border);">' +
+          '<div style="display:flex; justify-content:space-between; margin-bottom:6px;">' +
+            '<span class="text-xs text-muted uppercase">Coaching / Faculty:</span>' +
+            '<span class="fw-700 text-sm" style="color:' + centerObj.color + ';">' + centerObj.name + '</span>' +
+          '</div>' +
+          '<div style="display:flex; justify-content:space-between; margin-bottom:6px;">' +
+            '<span class="text-xs text-muted uppercase">Student:</span>' +
+            '<span class="fw-700 text-sm">' + student.name + ' (' + student.roll + ')</span>' +
+          '</div>' +
+          '<div style="display:flex; justify-content:space-between; margin-bottom:6px;">' +
+            '<span class="text-xs text-muted uppercase">Tuition Period:</span>' +
+            '<span class="fw-700 text-sm">' + feeItem.month + '</span>' +
+          '</div>' +
+          '<div style="display:flex; justify-content:space-between; border-top:1px dashed var(--border); padding-top:8px;">' +
+            '<span class="fw-700">Total Payable:</span>' +
+            '<span class="text-xl fw-800" style="color:var(--primary);">₹' + feeItem.amount.toLocaleString() + '</span>' +
+          '</div>' +
         '</div>' +
-        '<p class="text-xs text-muted">Clicking "Authorize Payment" will immediately update the local fee ledger and generate an official coaching receipt voucher.</p>' +
+        '<div>' +
+          '<label class="form-label">Select Simulated Payment Method:</label>' +
+          '<div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:8px;">' +
+            '<button type="button" class="btn btn-secondary pay-mode-choice selected" data-mode="UPI AutoPay">UPI / QR</button>' +
+            '<button type="button" class="btn btn-secondary pay-mode-choice" data-mode="Net Banking">Net Banking</button>' +
+            '<button type="button" class="btn btn-secondary pay-mode-choice" data-mode="Debit Card">Card</button>' +
+          '</div>' +
+        '</div>' +
+        '<div class="text-xs text-muted text-center">' +
+          'Note: This is a safe frontend prototype simulation. No real money is transferred.' +
+        '</div>' +
       '</div>';
 
-    var modalFooterHtml =
-      '<button type="button" class="btn btn-secondary" id="btnCancelModal">Cancel</button>' +
-      '<button type="button" class="btn btn-accent btn-lg" id="btnConfirmMockPay">Authorize Payment (₹' + feeItem.amount.toLocaleString() + ')</button>';
-
     openModal({
-      title: 'Tuition Fee Settlement',
-      body: modalBodyHtml,
-      footer: modalFooterHtml,
+      title: 'Pay Tuition Fees — ' + centerObj.name,
+      body: bodyHtml,
+      footer:
+        '<button type="button" class="btn btn-secondary" id="btnCancelPay">Cancel</button>' +
+        '<button type="button" class="btn btn-primary" id="btnConfirmPay">Simulate Payment (₹' + feeItem.amount + ')</button>',
       onReady: function (overlay, closeModal) {
-        var cancelBtn = overlay.querySelector('#btnCancelModal');
+        var selectedMode = 'UPI AutoPay';
+        var modeChoices = overlay.querySelectorAll('.pay-mode-choice');
+        modeChoices.forEach(function (choice) {
+          choice.addEventListener('click', function () {
+            modeChoices.forEach(function (c) { c.classList.remove('selected'); });
+            this.classList.add('selected');
+            selectedMode = this.getAttribute('data-mode');
+          });
+        });
+
+        var cancelBtn = overlay.querySelector('#btnCancelPay');
         if (cancelBtn) cancelBtn.onclick = closeModal;
 
-        var confirmBtn = overlay.querySelector('#btnConfirmMockPay');
+        var confirmBtn = overlay.querySelector('#btnConfirmPay');
         if (confirmBtn) {
           confirmBtn.onclick = function () {
-            var selectedMode = 'Instant UPI';
-            var checkedRadio = overlay.querySelector('input[name="mockPayMode"]:checked');
-            if (checkedRadio) selectedMode = checkedRadio.value;
+            confirmBtn.disabled = true;
+            confirmBtn.textContent = 'Authorizing...';
 
-            var receiptNo = 'RCP-2025-' + Math.floor(100 + Math.random() * 900);
             var nowStr = new Date().toISOString().split('T')[0];
+            var receiptNo = (centerObj.code || 'RCP') + '-2025-' + Math.floor(100 + Math.random() * 900);
 
             feeItem.status = 'paid';
             feeItem.mode = selectedMode;
@@ -910,7 +1410,7 @@
               date: nowStr,
               action: 'fee_payment',
               points: 40,
-              description: 'Tuition fee cleared for ' + feeItem.month
+              description: 'Tuition fee cleared for ' + centerObj.name + ' (' + feeItem.month + ')'
             });
 
             Store.set('vs_fees', STATE.fees);
@@ -918,7 +1418,7 @@
             Store.set('vs_points_history', STATE.points_history);
 
             closeModal();
-            showToast('🎉 Fee payment of ₹' + feeItem.amount + ' verified! (+40 pts)', 'success', 4000);
+            showToast('🎉 Fee payment of ₹' + feeItem.amount + ' cleared for ' + centerObj.name + '! (+40 pts)', 'success', 4000);
             renderFeesView();
 
             setTimeout(function () {
@@ -932,39 +1432,45 @@
 
   function showReceiptModal(feeItem) {
     var student = getActiveStudent();
+    var centerObj = getCenterById(feeItem.center_id);
+
     var receiptBodyHtml =
-      '<div style="background:#FFFFFF; color:#0F172A; padding:22px; border-radius:var(--radius-md); border:1px solid #CBD5E1; font-family:var(--font-sans);">' +
-        '<div style="text-align:center; border-bottom:1.5px dashed #94A3B8; padding-bottom:14px; margin-bottom:14px;">' +
-          '<div style="font-weight:800; font-size:1.2rem; color:var(--primary);">' + (DATA.center ? DATA.center.name : 'Stellar Academy') + '</div>' +
-          '<div style="font-size:0.8rem; color:#64748B;">Official Coaching Fee Receipt Voucher</div>' +
-          '<div style="font-size:0.75rem; color:#64748B;">' + (DATA.center ? DATA.center.address : '') + '</div>' +
+      '<div style="background:#FFFFFF; color:#1F0D12; padding:22px; border-radius:var(--radius-md); border:1px solid #E8DDDD; font-family:var(--font-sans);">' +
+        '<div style="text-align:center; border-bottom:1.5px dashed #C28828; padding-bottom:14px; margin-bottom:14px;">' +
+          '<div style="font-weight:800; font-size:1.25rem; color:' + centerObj.color + ';">' + centerObj.name + '</div>' +
+          '<div style="font-size:0.8rem; color:#7E636B;">Official Tuition Fee Receipt Voucher &bull; ' + centerObj.type + '</div>' +
+          '<div style="font-size:0.75rem; color:#8E777D;">' + (centerObj.address || '') + '</div>' +
         '</div>' +
         '<table style="width:100%; font-size:0.85rem; margin-bottom:14px;">' +
-          '<tr><td style="color:#64748B; width:130px;">Receipt Voucher:</td><td class="fw-700"><code>' + feeItem.receipt_no + '</code></td></tr>' +
-          '<tr><td style="color:#64748B;">Payment Date:</td><td>' + (feeItem.paid_date || feeItem.due_date) + '</td></tr>' +
-          '<tr><td style="color:#64748B;">Candidate:</td><td class="fw-700">' + student.name + ' (' + student.roll + ')</td></tr>' +
-          '<tr><td style="color:#64748B;">Course/Batch:</td><td>Class 10 Morning Batch</td></tr>' +
-          '<tr><td style="color:#64748B;">Tuition Month:</td><td>' + feeItem.month + '</td></tr>' +
-          '<tr><td style="color:#64748B;">Authorized Mode:</td><td>' + (feeItem.mode || 'Instant UPI') + '</td></tr>' +
-          '<tr><td style="color:#64748B; font-weight:700; border-top:1px solid #E2E8F0; padding-top:8px;">Amount Received:</td><td style="font-weight:800; color:#10B981; font-size:1.15rem; border-top:1px solid #E2E8F0; padding-top:8px;">₹' + feeItem.amount.toLocaleString() + '</td></tr>' +
+          '<tr><td style="color:#7E636B; width:130px;">Receipt Voucher:</td><td class="fw-700"><code>' + feeItem.receipt_no + '</code></td></tr>' +
+          '<tr><td style="color:#7E636B;">Payment Date:</td><td>' + (feeItem.paid_date || feeItem.due_date) + '</td></tr>' +
+          '<tr><td style="color:#7E636B;">Candidate:</td><td class="fw-700">' + student.name + ' (' + student.roll + ')</td></tr>' +
+          '<tr><td style="color:#7E636B;">Course / Batch:</td><td>' + (centerObj.active_batch || student.class) + '</td></tr>' +
+          '<tr><td style="color:#7E636B;">Faculty Head:</td><td>' + centerObj.teacher_name + '</td></tr>' +
+          '<tr><td style="color:#7E636B;">Tuition Month:</td><td>' + feeItem.month + '</td></tr>' +
+          '<tr><td style="color:#7E636B;">Authorized Mode:</td><td>' + (feeItem.mode || 'Instant UPI') + '</td></tr>' +
+          '<tr><td style="color:#7E636B; font-weight:700; border-top:1px solid #E8DDDD; padding-top:8px;">Amount Received:</td><td style="font-weight:800; color:var(--primary); font-size:1.15rem; border-top:1px solid #E8DDDD; padding-top:8px;">₹' + feeItem.amount.toLocaleString() + '</td></tr>' +
         '</table>' +
         '<div style="text-align:center; padding:8px; background:#ECFDF5; border-radius:4px; color:#065F46; font-size:0.75rem; font-weight:700;">' +
           'STATUS: PAYMENT VERIFIED &bull; OFFICIAL LEDGER STORED' +
         '</div>' +
-        '<div style="text-align:center; font-size:0.65rem; color:#94A3B8; margin-top:12px;">' +
-          'Simulated digital fee voucher generated by Vilarci Study portal.' +
+        '<div style="text-align:center; font-size:0.65rem; color:#8E777D; margin-top:12px;">' +
+          'Simulated digital fee voucher generated by Vilarci Study platform.' +
         '</div>' +
       '</div>';
 
     openModal({
-      title: 'Fee Receipt Voucher',
+      title: 'Fee Receipt Voucher — ' + centerObj.name,
       body: receiptBodyHtml,
       footer: '<button type="button" class="btn btn-secondary" onclick="window.print()">Print Voucher</button>'
     });
   }
 
-  // ─── 10. PAGE: TIMETABLE & SYLLABUS ────────────────────────────────────────
+  // ─── 14. PAGE: TIMETABLE & SYLLABUS TRACKER ────────────────────────────────
   function renderTimetableView() {
+    var student = getActiveStudent();
+    renderTeacherHeroCard('timetableTeacherHeroContainer');
+
     var tabBtnTT = document.getElementById('tabBtnTimetable');
     var tabBtnSyl = document.getElementById('tabBtnSyllabus');
     var panelTT = document.getElementById('panelTimetable');
@@ -985,204 +1491,187 @@
       };
     }
 
-    var ttBody = document.getElementById('timetableGridBody');
-    if (ttBody) {
-      var timeSlots = [
-        { label: '09:00 - 10:00 AM', slot: '09:00' },
-        { label: '10:00 - 11:00 AM', slot: '10:00' }
-      ];
+    // Weekly Timetable Grid
+    var ttGrid = document.getElementById('timetableGrid');
+    if (ttGrid) {
       var days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-
-      ttBody.innerHTML = timeSlots.map(function (ts) {
-        var rowHtml = '<tr><td class="fw-700 text-xs">' + ts.label + '</td>';
-        days.forEach(function (day) {
-          var entry = (DATA.timetable || []).find(function (t) {
-            return t.day_of_week === day && t.start_time === ts.slot;
-          });
-
-          if (entry) {
-            var sClass = 'tt-' + entry.subject.toLowerCase();
-            rowHtml +=
-              '<td>' +
-                '<span class="tt-cell ' + sClass + '">' + entry.subject + '</span>' +
-                '<div class="text-xs text-muted" style="margin-top:4px;">' + entry.teacher.split(' ').pop() + '</div>' +
-              '</td>';
-          } else {
-            rowHtml += '<td><span class="tt-empty">—</span></td>';
-          }
+      ttGrid.innerHTML = days.map(function (day) {
+        var slots = (DATA.timetable || []).filter(function (t) {
+          var matchCenter = currentCenterId === 'all'
+            ? (student.enrolled_centers || []).indexOf(t.center_id) !== -1
+            : t.center_id === currentCenterId;
+          return t.day_of_week === day && matchCenter;
         });
-        rowHtml += '</tr>';
-        return rowHtml;
+
+        var slotsHtml = slots.length === 0
+          ? '<div class="text-xs text-muted" style="padding:10px;">Self-Study / Revision</div>'
+          : slots.map(function (s) {
+              var centerObj = getCenterById(s.center_id);
+              return (
+                '<div class="tt-slot">' +
+                  '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">' +
+                    '<span class="tt-slot-time">' + s.start_time + '–' + s.end_time + '</span>' +
+                    '<span class="center-tag" style="border-color:' + centerObj.color + '; color:' + centerObj.color + '; font-size:9px;">' + centerObj.logo_text + '</span>' +
+                  '</div>' +
+                  '<div class="tt-slot-subject">' + s.subject + '</div>' +
+                  '<div class="tt-slot-teacher">' + s.teacher + '</div>' +
+                  '<div class="tt-slot-room">' + s.room + '</div>' +
+                '</div>'
+              );
+            }).join('');
+
+        return (
+          '<div class="tt-day-col">' +
+            '<div class="tt-day-header">' + day + '</div>' +
+            '<div class="tt-slots-list">' + slotsHtml + '</div>' +
+          '</div>'
+        );
       }).join('');
     }
 
-    renderSyllabusSection('all');
+    // Syllabus Tracker
+    var sylContainer = document.getElementById('syllabusContainer');
+    if (sylContainer) {
+      var activeSyllabus = (STATE.syllabus || []).filter(function (s) {
+        return currentCenterId === 'all'
+          ? (student.enrolled_centers || []).indexOf(s.center_id) !== -1
+          : s.center_id === currentCenterId;
+      });
 
-    var filterContainer = document.getElementById('syllabusSubjectFilter');
-    if (filterContainer) {
-      var chips = filterContainer.querySelectorAll('.chip');
+      var activeSubject = 'all';
+      var chips = document.querySelectorAll('#syllabusSubjectFilter .chip');
+
+      var renderSyllabusTopics = function (filterSubject) {
+        var topics = activeSyllabus.filter(function (t) {
+          return filterSubject === 'all' ? true : t.subject === filterSubject;
+        });
+
+        if (topics.length === 0) {
+          sylContainer.innerHTML = '<div class="card text-center p-24 text-muted">No syllabus topics found for this subject and faculty selection.</div>';
+          return;
+        }
+
+        sylContainer.innerHTML = topics.map(function (item) {
+          var centerObj = getCenterById(item.center_id);
+          var statusBadge = '';
+          if (item.status === 'covered') {
+            statusBadge = '<span class="badge badge-success">Covered</span>';
+          } else if (item.status === 'partial') {
+            statusBadge = '<span class="badge badge-warning">Partial</span>';
+          } else if (item.status === 'skipped') {
+            statusBadge = '<span class="badge badge-neutral">Skipped</span>';
+          } else {
+            statusBadge = '<span class="badge badge-neutral">Upcoming</span>';
+          }
+
+          return (
+            '<div class="syllabus-topic-card">' +
+              '<div style="flex:1;">' +
+                '<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:4px;">' +
+                  '<span class="badge badge-neutral text-xs">' + item.subject + '</span>' +
+                  '<span class="center-tag" style="border-color:' + centerObj.color + '; color:' + centerObj.color + '; font-size:10px;">🏛️ ' + centerObj.name + '</span>' +
+                  '<span class="text-xs text-muted">Chapter: ' + item.chapter + '</span>' +
+                  statusBadge +
+                '</div>' +
+                '<h4 class="text-sm fw-700" style="color:var(--text-main); margin-bottom:4px;">' + item.topic + '</h4>' +
+                '<div class="text-xs text-muted">' +
+                  'Planned: ' + item.planned_date +
+                  (item.covered_date ? ' &bull; Taught: ' + item.covered_date : '') +
+                '</div>' +
+              '</div>' +
+              '<label class="syllabus-check-label" style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer;">' +
+                '<input type="checkbox" class="syl-checkbox" data-syl-id="' + item.id + '" ' + (item.revised_by_student ? 'checked' : '') + ' style="accent-color:var(--primary);">' +
+                '<span>I revised this topic</span>' +
+              '</label>' +
+            '</div>'
+          );
+        }).join('');
+
+        var checkBoxes = sylContainer.querySelectorAll('.syl-checkbox');
+        checkBoxes.forEach(function (cb) {
+          cb.addEventListener('change', function () {
+            var sid = this.getAttribute('data-syl-id');
+            var rec = (STATE.syllabus || []).find(function (s) { return s.id === sid; });
+            if (rec) {
+              rec.revised_by_student = this.checked;
+              if (this.checked) {
+                STATE.points += 15;
+                STATE.points_history.unshift({
+                  id: 'ph-syl-' + Date.now(),
+                  student_id: currentStudentId,
+                  date: new Date().toISOString().split('T')[0],
+                  action: 'topic_revised',
+                  points: 15,
+                  description: 'Self-revision confirmed: ' + rec.topic
+                });
+                Store.set('vs_points', STATE.points);
+                Store.set('vs_points_history', STATE.points_history);
+                showToast('Topic marked as revised! (+15 pts)', 'success', 2500);
+              }
+              Store.set('vs_syllabus', STATE.syllabus);
+            }
+          });
+        });
+      };
+
       chips.forEach(function (chip) {
         chip.onclick = function () {
           chips.forEach(function (c) { c.classList.remove('active'); });
           this.classList.add('active');
-          var subj = this.getAttribute('data-subject');
-          renderSyllabusSection(subj);
+          activeSubject = this.getAttribute('data-subject');
+          renderSyllabusTopics(activeSubject);
         };
       });
+
+      renderSyllabusTopics(activeSubject);
     }
   }
 
-  function renderSyllabusSection(selectedSubject) {
-    var container = document.getElementById('syllabusContainer');
-    if (!container) return;
-
-    var subjects = ['Maths', 'Physics', 'Chemistry', 'Biology', 'English'];
-    if (selectedSubject !== 'all') {
-      subjects = [selectedSubject];
-    }
-
-    container.innerHTML = subjects.map(function (subj) {
-      var topics = (STATE.syllabus || []).filter(function (s) { return s.subject === subj; });
-      var coveredCount = topics.filter(function (s) { return s.status === 'covered'; }).length;
-      var completionPct = topics.length > 0 ? Math.round((coveredCount / topics.length) * 100) : 0;
-
-      return (
-        '<div class="syllabus-subject-section card mb-20">' +
-          '<div class="card-header">' +
-            '<div>' +
-              '<h3 class="card-title">' + subj + '</h3>' +
-              '<span class="text-xs text-muted">' + coveredCount + ' of ' + topics.length + ' syllabus modules completed</span>' +
-            '</div>' +
-            '<span class="badge badge-primary">' + completionPct + '% Done</span>' +
-          '</div>' +
-          '<div class="card-body">' +
-            '<div class="progress-bar-track mb-16">' +
-              '<div class="progress-bar-fill accent" style="width:' + completionPct + '%;"></div>' +
-            '</div>' +
-            '<div class="syllabus-topics-list">' +
-              topics.map(function (t) {
-                var statusBadge = '';
-                if (t.status === 'covered') statusBadge = '<span class="badge badge-success">Covered</span>';
-                else if (t.status === 'partial') statusBadge = '<span class="badge badge-warning">Partial</span>';
-                else if (t.status === 'skipped') statusBadge = '<span class="badge badge-error">Skipped</span>';
-                else statusBadge = '<span class="badge badge-neutral">Upcoming</span>';
-
-                var revisedClass = t.revised_by_student ? ' revised' : '';
-                var revisedText = t.revised_by_student ? '✓ Revised' : 'Mark Revised';
-
-                return (
-                  '<div class="syllabus-topic-item ' + t.status + '">' +
-                    '<div style="flex:1;">' +
-                      '<div class="fw-700 text-sm">' + t.topic + ' ' + statusBadge + '</div>' +
-                      '<div class="text-xs text-muted" style="margin-top:2px;">' + t.chapter + ' &bull; Scheduled: ' + t.planned_date + '</div>' +
-                    '</div>' +
-                    '<button type="button" class="revise-btn' + revisedClass + '" data-topic-id="' + t.id + '">' +
-                      revisedText +
-                    '</button>' +
-                  '</div>'
-                );
-              }).join('') +
-            '</div>' +
-          '</div>' +
-        '</div>'
-      );
-    }).join('');
-
-    var reviseBtns = container.querySelectorAll('.revise-btn');
-    reviseBtns.forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        var tid = this.getAttribute('data-topic-id');
-        var topic = (STATE.syllabus || []).find(function (s) { return s.id === tid; });
-        if (topic) {
-          topic.revised_by_student = !topic.revised_by_student;
-          if (topic.revised_by_student) {
-            STATE.points += 15;
-            STATE.points_history.unshift({
-              id: 'ph-rev-' + Date.now(),
-              student_id: currentStudentId,
-              date: new Date().toISOString().split('T')[0],
-              action: 'topic_revised',
-              points: 15,
-              description: 'Self-revision confirmed: ' + topic.topic
-            });
-            showToast('Self-revision marked! (+15 pts)', 'success', 2500);
-          } else {
-            showToast('Revision checkmark removed', 'info', 1800);
-          }
-
-          Store.set('vs_syllabus', STATE.syllabus);
-          Store.set('vs_points', STATE.points);
-          Store.set('vs_points_history', STATE.points_history);
-          renderSyllabusSection(selectedSubject);
-        }
-      });
-    });
-  }
-
-  // ─── 11. PAGE: FOCUS STUDY ─────────────────────────────────────────────────
+  // ─── 15. PAGE: FOCUS STUDY ROOM ────────────────────────────────────────────
   function extractYouTubeId(url) {
     if (!url) return null;
-    var trimmed = url.trim();
-    var match = trimmed.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|shorts)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i);
-    return (match && match[1]) ? match[1] : null;
+    url = url.trim();
+    var match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([\w-]{11})/);
+    return match ? match[1] : null;
   }
 
   function renderFocusView() {
+    var iframe = document.getElementById('focusVideoIframe');
     var form = document.getElementById('focusUrlForm');
     var input = document.getElementById('focusUrlInput');
-    var errorSpan = document.getElementById('focusUrlError');
-    var layout = document.getElementById('focusMainLayout');
-    var iframe = document.getElementById('focusVideoIframe');
+    var errorEl = document.getElementById('focusUrlError');
     var sampleBtn = document.getElementById('btnFocusSampleVideo');
+    var markDoneBtn = document.getElementById('btnFocusMarkTopicDone');
     var notesArea = document.getElementById('focusNotesArea');
-    var notesSaved = document.getElementById('notesSavedIndicator');
+    var notesStatus = document.getElementById('notesSaveStatus');
 
-    if (notesArea) {
-      var savedNote = (STATE.video_notes || {})[currentFocusVideoId] || '';
-      notesArea.value = savedNote;
-
-      var debounceTimer = null;
-      notesArea.oninput = function () {
-        if (notesSaved) {
-          notesSaved.textContent = 'Saving...';
-          notesSaved.classList.remove('saved');
-        }
-        clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(function () {
-          STATE.video_notes = STATE.video_notes || {};
-          STATE.video_notes[currentFocusVideoId] = notesArea.value;
-          Store.set('vs_video_notes', STATE.video_notes);
-          if (notesSaved) {
-            notesSaved.textContent = 'Autosaved';
-            notesSaved.classList.add('saved');
-          }
-        }, 500);
-      };
-    }
-
-    function loadVideoById(vid) {
-      currentFocusVideoId = vid;
+    var loadVideo = function (videoId) {
+      currentFocusVideoId = videoId;
       if (iframe) {
-        iframe.src = 'https://www.youtube-nocookie.com/embed/' + vid + '?rel=0&autoplay=0';
+        iframe.src = 'https://www.youtube-nocookie.com/embed/' + videoId + '?rel=0&modestbranding=1';
       }
-      if (layout) layout.classList.add('visible');
-      if (errorSpan) errorSpan.classList.remove('visible');
       if (notesArea) {
-        notesArea.value = (STATE.video_notes || {})[vid] || '';
+        var allNotes = STATE.video_notes || {};
+        notesArea.value = allNotes[videoId] || '';
       }
-      showToast('Loaded distraction-free lecture player', 'info', 2000);
+    };
+
+    if (iframe && !iframe.src) {
+      loadVideo(currentFocusVideoId);
     }
 
-    if (form) {
+    if (form && input) {
       form.onsubmit = function (e) {
         e.preventDefault();
-        var val = input ? input.value : '';
+        var val = input.value.trim();
         var vid = extractYouTubeId(val);
         if (vid) {
-          loadVideoById(vid);
+          if (errorEl) errorEl.style.display = 'none';
+          loadVideo(vid);
+          showToast('Loaded YouTube lecture in distraction-free player!', 'success', 2500);
         } else {
-          if (errorSpan) errorSpan.classList.add('visible');
-          showToast('Invalid YouTube URL format.', 'error', 3000);
+          if (errorEl) errorEl.style.display = 'block';
+          showToast('Invalid YouTube URL. Please check link format.', 'error', 3000);
         }
       };
     }
@@ -1190,382 +1679,375 @@
     if (sampleBtn) {
       sampleBtn.onclick = function () {
         if (input) input.value = 'https://www.youtube.com/watch?v=IWigcMGGMIs';
-        loadVideoById('IWigcMGGMIs');
+        if (errorEl) errorEl.style.display = 'none';
+        loadVideo('IWigcMGGMIs');
+        showToast('Sample Mathematics Masterclass loaded', 'info', 2000);
       };
     }
 
-    if (layout && !iframe.src && currentFocusVideoId) {
-      iframe.src = 'https://www.youtube-nocookie.com/embed/' + currentFocusVideoId + '?rel=0&autoplay=0';
-      layout.classList.add('visible');
+    if (notesArea) {
+      var debounceTimer;
+      notesArea.oninput = function () {
+        if (notesStatus) notesStatus.textContent = 'Saving...';
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(function () {
+          if (!STATE.video_notes) STATE.video_notes = {};
+          STATE.video_notes[currentFocusVideoId] = notesArea.value;
+          Store.set('vs_video_notes', STATE.video_notes);
+          if (notesStatus) notesStatus.textContent = 'Autosaved';
+        }, 500);
+      };
     }
 
-    var markDoneBtn = document.getElementById('btnFocusMarkTopicDone');
     if (markDoneBtn) {
       markDoneBtn.onclick = function () {
         STATE.points += 20;
         STATE.points_history.unshift({
-          id: 'ph-foc-' + Date.now(),
+          id: 'ph-vid-' + Date.now(),
           student_id: currentStudentId,
           date: new Date().toISOString().split('T')[0],
-          action: 'focus_study',
+          action: 'video_mastery',
           points: 20,
-          description: 'Focus lecture topic completed'
+          description: 'Lecture video completed & topic mastered'
         });
         Store.set('vs_points', STATE.points);
         Store.set('vs_points_history', STATE.points_history);
-        showToast('🎯 Focus Topic Marked Done! (+20 pts)', 'success', 3000);
+        showToast('Topic marked as mastered! (+20 pts awarded)', 'success', 3000);
       };
     }
 
-    setupFocusTimer();
-  }
-
-  function setupFocusTimer() {
-    var display = document.getElementById('focusTimerDisplay');
-    var startBtn = document.getElementById('btnStartPauseTimer');
-    var resetBtn = document.getElementById('btnResetTimer');
-    var completeMsg = document.getElementById('timerCompleteMsg');
+    // Pomodoro Timer Controls
+    var timerDisplay = document.getElementById('focusTimerDisplay');
+    var btnStartPause = document.getElementById('btnStartPauseTimer');
+    var btnReset = document.getElementById('btnResetTimer');
     var presetBtns = document.querySelectorAll('.timer-preset-btn');
-    var customMinInput = document.getElementById('customTimerMin');
-    var applyCustomBtn = document.getElementById('btnApplyCustomTimer');
+    var customInput = document.getElementById('customTimerMin');
+    var btnApplyCustom = document.getElementById('btnApplyCustomTimer');
+    var completeMsg = document.getElementById('timerCompleteMsg');
 
-    function updateDisplay() {
-      if (!display) return;
-      var m = Math.floor(timerRemainingSeconds / 60);
-      var s = timerRemainingSeconds % 60;
-      display.textContent = String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+    function updateTimerDisplay() {
+      var mins = Math.floor(timerRemainingSeconds / 60);
+      var secs = timerRemainingSeconds % 60;
+      if (timerDisplay) {
+        timerDisplay.textContent = String(mins).padStart(2, '0') + ':' + String(secs).padStart(2, '0');
+      }
     }
-
-    updateDisplay();
 
     presetBtns.forEach(function (btn) {
       btn.onclick = function () {
         presetBtns.forEach(function (b) { b.classList.remove('selected'); });
         this.classList.add('selected');
-        var mins = parseInt(this.getAttribute('data-mins'), 10) || 25;
+        var m = parseInt(this.getAttribute('data-mins'), 10);
+        timerRemainingSeconds = m * 60;
         clearInterval(timerInterval);
         timerIsRunning = false;
-        timerRemainingSeconds = mins * 60;
-        if (startBtn) startBtn.textContent = 'Start Timer';
-        if (display) display.classList.remove('running', 'done');
-        if (completeMsg) completeMsg.classList.remove('visible');
-        updateDisplay();
+        if (btnStartPause) btnStartPause.textContent = 'Start Timer';
+        if (completeMsg) completeMsg.style.display = 'none';
+        updateTimerDisplay();
       };
     });
 
-    if (applyCustomBtn && customMinInput) {
-      applyCustomBtn.onclick = function () {
-        var val = parseInt(customMinInput.value, 10);
-        if (val && val > 0 && val <= 180) {
+    if (btnApplyCustom && customInput) {
+      btnApplyCustom.onclick = function () {
+        var m = parseInt(customInput.value, 10);
+        if (m && m > 0 && m <= 180) {
           presetBtns.forEach(function (b) { b.classList.remove('selected'); });
+          timerRemainingSeconds = m * 60;
           clearInterval(timerInterval);
           timerIsRunning = false;
-          timerRemainingSeconds = val * 60;
-          if (startBtn) startBtn.textContent = 'Start Timer';
-          if (display) display.classList.remove('running', 'done');
-          if (completeMsg) completeMsg.classList.remove('visible');
-          updateDisplay();
-          showToast('Focus timer set to ' + val + ' minutes', 'info', 2000);
+          if (btnStartPause) btnStartPause.textContent = 'Start Timer';
+          if (completeMsg) completeMsg.style.display = 'none';
+          updateTimerDisplay();
+          showToast('Focus countdown configured for ' + m + ' minutes', 'info', 2000);
         } else {
-          showToast('Enter valid minutes between 1 and 180', 'error', 2500);
+          showToast('Please enter minutes between 1 and 180', 'warning', 2500);
         }
       };
     }
 
-    if (startBtn) {
-      startBtn.onclick = function () {
+    if (btnStartPause) {
+      btnStartPause.onclick = function () {
         if (timerIsRunning) {
           clearInterval(timerInterval);
           timerIsRunning = false;
-          startBtn.textContent = 'Resume';
-          if (display) display.classList.remove('running');
+          btnStartPause.textContent = 'Resume Timer';
         } else {
           timerIsRunning = true;
-          startBtn.textContent = 'Pause';
-          if (display) display.classList.add('running');
-          if (completeMsg) completeMsg.classList.remove('visible');
+          btnStartPause.textContent = 'Pause Timer';
+          if (completeMsg) completeMsg.style.display = 'none';
 
           timerInterval = setInterval(function () {
             if (timerRemainingSeconds > 0) {
               timerRemainingSeconds--;
-              updateDisplay();
+              updateTimerDisplay();
             } else {
               clearInterval(timerInterval);
               timerIsRunning = false;
-              startBtn.textContent = 'Start Timer';
-              if (display) {
-                display.classList.remove('running');
-                display.classList.add('done');
-              }
-              if (completeMsg) completeMsg.classList.add('visible');
+              btnStartPause.textContent = 'Start Timer';
+              if (completeMsg) completeMsg.style.display = 'block';
 
               STATE.points += 50;
-              STATE.streak += 1;
-              STATE.focus_sessions.push({
-                id: 'fs-' + Date.now(),
-                student_id: currentStudentId,
-                date: new Date().toISOString(),
-                duration_mins: 25
-              });
+              STATE.streak = (STATE.streak || 14) + 1;
               STATE.points_history.unshift({
-                id: 'ph-foc-comp-' + Date.now(),
+                id: 'ph-pomodoro-' + Date.now(),
                 student_id: currentStudentId,
                 date: new Date().toISOString().split('T')[0],
-                action: 'focus_completed',
+                action: 'focus_session',
                 points: 50,
-                description: 'Full focus timer study sprint completed'
+                description: 'Focus timer sprint achieved (+50 pts & streak increased)'
               });
 
               Store.set('vs_points', STATE.points);
               Store.set('vs_streak', STATE.streak);
-              Store.set('vs_focus_sessions', STATE.focus_sessions);
               Store.set('vs_points_history', STATE.points_history);
-
-              showToast('🏆 Focus session complete! +50 Points awarded!', 'success', 5000);
+              showToast('🏆 Focus block complete! 50 points credited & study streak boosted!', 'success', 4500);
             }
           }, 1000);
         }
       };
     }
 
-    if (resetBtn) {
-      resetBtn.onclick = function () {
+    if (btnReset) {
+      btnReset.onclick = function () {
         clearInterval(timerInterval);
         timerIsRunning = false;
         timerRemainingSeconds = 25 * 60;
-        if (startBtn) startBtn.textContent = 'Start Timer';
-        if (display) display.classList.remove('running', 'done');
-        if (completeMsg) completeMsg.classList.remove('visible');
-        updateDisplay();
+        if (btnStartPause) btnStartPause.textContent = 'Start Timer';
+        if (completeMsg) completeMsg.style.display = 'none';
+        updateTimerDisplay();
       };
     }
+
+    updateTimerDisplay();
   }
 
-  // ─── 12. PAGE: LABS & SIMULATIONS ──────────────────────────────────────────
+  // ─── 16. PAGE: STEM LABS & SIMULATIONS (Generic for All Centers) ───────────
   function renderLabsView() {
     var grid = document.getElementById('simGrid');
     var viewer = document.getElementById('simViewer');
     var iframe = document.getElementById('simIframe');
-    var fallback = document.getElementById('simFallback');
-    var backBtn = document.getElementById('btnBackFromSim');
-    var viewerTitle = document.getElementById('simViewerTitle');
+    var titleEl = document.getElementById('simViewerTitle');
     var externalLink = document.getElementById('simExternalLink');
     var fallbackBtn = document.getElementById('simFallbackBtn');
-    var filterContainer = document.getElementById('labsSubjectFilter');
+    var backBtn = document.getElementById('btnBackFromSim');
+    var chips = document.querySelectorAll('#labsSubjectFilter .chip');
 
-    function renderSimCards(filterSubject) {
+    var allSims = DATA.simulations || [];
+    var activeFilter = 'all';
+
+    var renderGrid = function (filter) {
       if (!grid) return;
-      var sims = (DATA.simulations || []);
-      if (filterSubject && filterSubject !== 'all') {
-        sims = sims.filter(function (s) { return s.subject === filterSubject; });
-      }
+      var filtered = allSims.filter(function (s) {
+        return filter === 'all' ? true : s.subject === filter;
+      });
 
-      grid.innerHTML = sims.map(function (s) {
+      grid.innerHTML = filtered.map(function (sim) {
         return (
-          '<div class="sim-card" data-sim-id="' + s.id + '">' +
-            '<div class="sim-emoji">' + s.thumbnail_emoji + '</div>' +
-            '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">' +
-              '<span class="badge badge-primary">' + s.subject + '</span>' +
-              '<span class="text-xs text-muted">Class ' + s.class + '</span>' +
+          '<div class="card sim-card" data-sim-id="' + sim.id + '">' +
+            '<div class="sim-card-emoji">' + sim.thumbnail_emoji + '</div>' +
+            '<div class="card-body">' +
+              '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">' +
+                '<span class="badge badge-primary text-xs">' + sim.subject + '</span>' +
+                '<span class="badge badge-neutral text-xs">Class ' + sim.class + '</span>' +
+              '</div>' +
+              '<h3 class="sim-card-title">' + sim.title + '</h3>' +
+              '<p class="sim-card-desc">' + sim.description + '</p>' +
+              '<button type="button" class="btn btn-primary btn-sm btn-launch-sim" style="width:100%;" data-sim-id="' + sim.id + '">' +
+                '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px; height:14px;"><polygon points="5 3 19 12 5 21 5 3"/></svg>' +
+                'Launch Simulation' +
+              '</button>' +
             '</div>' +
-            '<h3 class="sim-title">' + s.title + '</h3>' +
-            '<p class="sim-desc">' + s.description + '</p>' +
-            '<button type="button" class="btn btn-sm btn-secondary w-full">Launch Simulation &rarr;</button>' +
           '</div>'
         );
       }).join('');
 
-      var cards = grid.querySelectorAll('.sim-card');
-      cards.forEach(function (card) {
-        card.addEventListener('click', function () {
+      var launchBtns = grid.querySelectorAll('.btn-launch-sim, .sim-card');
+      launchBtns.forEach(function (btn) {
+        btn.addEventListener('click', function (e) {
           var sid = this.getAttribute('data-sim-id');
-          var sim = (DATA.simulations || []).find(function (s) { return s.id === sid; });
-          if (sim) launchSim(sim);
+          var simObj = allSims.find(function (s) { return s.id === sid; });
+          if (simObj) launchSim(simObj);
         });
       });
-    }
+    };
 
-    function launchSim(sim) {
+    var launchSim = function (sim) {
       if (grid) grid.style.display = 'none';
       if (viewer) viewer.classList.add('active');
-      if (viewerTitle) viewerTitle.textContent = sim.title + ' (' + sim.subject + ')';
+      if (titleEl) titleEl.textContent = sim.title + ' (' + sim.subject + ')';
       if (externalLink) externalLink.href = sim.phet_url;
       if (fallbackBtn) fallbackBtn.href = sim.phet_url;
-      if (fallback) fallback.classList.remove('visible');
-
-      if (iframe) {
-        iframe.src = sim.phet_url;
-
-        var loadTimeout = setTimeout(function () {
-          try {
-            if (!iframe.contentWindow || iframe.contentWindow.location.href === 'about:blank') {
-              if (fallback) fallback.classList.add('visible');
-            }
-          } catch (e) {}
-        }, 6000);
-
-        iframe.onload = function () {
-          clearTimeout(loadTimeout);
-        };
-
-        iframe.onerror = function () {
-          clearTimeout(loadTimeout);
-          if (fallback) fallback.classList.add('visible');
-        };
-      }
-    }
+      if (iframe) iframe.src = sim.phet_url;
+      window.scrollTo(0, 0);
+    };
 
     if (backBtn) {
       backBtn.onclick = function () {
+        if (iframe) iframe.src = '';
         if (viewer) viewer.classList.remove('active');
         if (grid) grid.style.display = 'grid';
-        if (iframe) iframe.src = '';
       };
     }
 
-    if (filterContainer) {
-      var chips = filterContainer.querySelectorAll('.chip');
-      chips.forEach(function (chip) {
-        chip.onclick = function () {
-          chips.forEach(function (c) { c.classList.remove('active'); });
-          this.classList.add('active');
-          var subj = this.getAttribute('data-subject');
-          renderSimCards(subj);
-        };
-      });
-    }
+    chips.forEach(function (chip) {
+      chip.onclick = function () {
+        chips.forEach(function (c) { c.classList.remove('active'); });
+        this.classList.add('active');
+        activeFilter = this.getAttribute('data-subject');
+        renderGrid(activeFilter);
+      };
+    });
 
-    renderSimCards('all');
+    renderGrid(activeFilter);
   }
 
-  // ─── 13. PAGE: VIDEO LIBRARY ───────────────────────────────────────────────
+  // ─── 17. PAGE: CURATED VIDEO LESSONS ───────────────────────────────────────
   function renderVideosView() {
+    var student = getActiveStudent();
+    renderTeacherHeroCard('videosTeacherHeroContainer');
+
     var grid = document.getElementById('videoCardsGrid');
-    var activeContainer = document.getElementById('videoActivePlayerContainer');
+    var activePlayerContainer = document.getElementById('videoActivePlayerContainer');
     var activeIframe = document.getElementById('videoActiveIframe');
     var activeTitle = document.getElementById('videoActiveTitle');
     var closeActiveBtn = document.getElementById('btnCloseActiveVideo');
-    var filterContainer = document.getElementById('videoSubjectFilter');
+    var chips = document.querySelectorAll('#videoSubjectFilter .chip');
 
-    function renderVideoList(subjectFilter) {
+    var activeVideos = (STATE.videos || []).filter(function (v) {
+      return currentCenterId === 'all'
+        ? (student.enrolled_centers || []).indexOf(v.center_id) !== -1
+        : v.center_id === currentCenterId;
+    });
+
+    var activeSubFilter = 'all';
+
+    var renderGrid = function (sub) {
       if (!grid) return;
-      var vids = DATA.videos || [];
-      if (subjectFilter && subjectFilter !== 'all') {
-        vids = vids.filter(function (v) { return v.subject === subjectFilter; });
+      var filtered = activeVideos.filter(function (v) {
+        return sub === 'all' ? true : v.subject === sub;
+      });
+
+      if (filtered.length === 0) {
+        grid.innerHTML = '<div class="card text-center p-24 text-muted" style="grid-column:1/-1;">No video lectures found for this subject and faculty selection.</div>';
+        return;
       }
 
-      var subjectEmojis = {
-        'Maths': '📐',
-        'Physics': '⚡',
-        'Chemistry': '🧪',
-        'Biology': '🧬',
-        'English': '📖'
-      };
-
-      grid.innerHTML = vids.map(function (v) {
-        var emoji = subjectEmojis[v.subject] || '🎓';
+      grid.innerHTML = filtered.map(function (v) {
+        var centerObj = getCenterById(v.center_id);
         return (
-          '<div class="video-card" data-video-id="' + v.youtube_id + '" data-video-title="' + v.title + '">' +
-            '<div class="video-thumb">' +
-              emoji +
-              '<div class="video-play-btn">' +
-                '<svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>' +
-              '</div>' +
+          '<div class="card" style="display:flex; flex-direction:column; overflow:hidden;">' +
+            '<div style="background:linear-gradient(135deg, var(--surface-muted), var(--surface-alt)); padding:22px; text-align:center; position:relative;">' +
+              '<span class="badge badge-neutral" style="position:absolute; top:10px; right:10px; font-size:10px;">' + v.duration + '</span>' +
+              '<div style="font-size:36px; margin-bottom:4px;">▶️</div>' +
+              '<span class="center-tag" style="border-color:' + centerObj.color + '; color:' + centerObj.color + '; font-size:10px;">' + centerObj.name + '</span>' +
             '</div>' +
-            '<div class="video-info">' +
-              '<div style="display:flex; justify-content:space-between; margin-bottom:4px;">' +
-                '<span class="badge badge-primary">' + v.subject + '</span>' +
-                '<span class="text-xs text-muted">' + v.duration + '</span>' +
+            '<div class="card-body" style="flex:1; display:flex; flex-direction:column;">' +
+              '<div style="display:flex; gap:6px; margin-bottom:6px;">' +
+                '<span class="badge badge-primary text-xs">' + v.subject + '</span>' +
+                '<span class="badge badge-neutral text-xs">' + v.chapter + '</span>' +
               '</div>' +
-              '<h3 class="video-title">' + v.title + '</h3>' +
-              '<div class="video-meta">' + v.chapter + '</div>' +
+              '<h3 class="text-sm fw-700" style="color:var(--text-main); margin-bottom:6px;">' + v.title + '</h3>' +
+              '<p class="text-xs text-muted mb-12" style="flex:1;">' + v.description + '</p>' +
+              '<div class="text-xs text-secondary mb-12">Faculty: <strong>' + v.teacher_name + '</strong></div>' +
+              '<button type="button" class="btn btn-primary btn-sm btn-play-lesson" data-yt="' + v.youtube_id + '" data-title="' + v.title + '">' +
+                '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px; height:14px;"><polygon points="5 3 19 12 5 21 5 3"/></svg>' +
+                'Watch Masterclass' +
+              '</button>' +
             '</div>' +
           '</div>'
         );
       }).join('');
 
-      var cards = grid.querySelectorAll('.video-card');
-      cards.forEach(function (card) {
-        card.addEventListener('click', function () {
-          var yid = this.getAttribute('data-video-id');
-          var title = this.getAttribute('data-video-title');
-          if (activeContainer && activeIframe) {
-            activeIframe.src = 'https://www.youtube-nocookie.com/embed/' + yid + '?rel=0&autoplay=1';
-            if (activeTitle) activeTitle.textContent = title;
-            activeContainer.style.display = 'block';
-            window.scrollTo({ top: activeContainer.offsetTop - 80, behavior: 'smooth' });
+      var playBtns = grid.querySelectorAll('.btn-play-lesson');
+      playBtns.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var ytid = this.getAttribute('data-yt');
+          var t = this.getAttribute('data-title');
+          if (activePlayerContainer && activeIframe) {
+            activeTitle.textContent = t;
+            activeIframe.src = 'https://www.youtube-nocookie.com/embed/' + ytid + '?rel=0&autoplay=1';
+            activePlayerContainer.style.display = 'block';
+            window.scrollTo({ top: activePlayerContainer.offsetTop - 80, behavior: 'smooth' });
           }
         });
       });
-    }
+    };
 
-    if (closeActiveBtn && activeContainer && activeIframe) {
+    if (closeActiveBtn) {
       closeActiveBtn.onclick = function () {
-        activeIframe.src = '';
-        activeContainer.style.display = 'none';
+        if (activeIframe) activeIframe.src = '';
+        if (activePlayerContainer) activePlayerContainer.style.display = 'none';
       };
     }
 
-    if (filterContainer) {
-      var chips = filterContainer.querySelectorAll('.chip');
-      chips.forEach(function (chip) {
-        chip.onclick = function () {
-          chips.forEach(function (c) { c.classList.remove('active'); });
-          this.classList.add('active');
-          var subj = this.getAttribute('data-subject');
-          renderVideoList(subj);
-        };
-      });
-    }
+    chips.forEach(function (chip) {
+      chip.onclick = function () {
+        chips.forEach(function (c) { c.classList.remove('active'); });
+        this.classList.add('active');
+        activeSubFilter = this.getAttribute('data-subject');
+        renderGrid(activeSubFilter);
+      };
+    });
 
-    renderVideoList('all');
+    renderGrid(activeSubFilter);
   }
 
-  // ─── 14. PAGE: TESTS & SCORES ──────────────────────────────────────────────
+  // ─── 18. PAGE: TESTS & ANALYTICS ───────────────────────────────────────────
   function renderTestsView() {
-    var tabBtnReports = document.getElementById('tabBtnTestReports');
-    var tabBtnQuiz = document.getElementById('tabBtnTakeQuiz');
+    var student = getActiveStudent();
+    renderTeacherHeroCard('testsTeacherHeroContainer');
+
+    var tabReports = document.getElementById('tabBtnTestReports');
+    var tabQuiz = document.getElementById('tabBtnTakeQuiz');
     var panelReports = document.getElementById('panelTestReports');
     var panelQuiz = document.getElementById('panelTakeQuiz');
 
-    if (tabBtnReports && tabBtnQuiz && panelReports && panelQuiz) {
-      tabBtnReports.onclick = function () {
-        tabBtnReports.classList.add('active');
-        tabBtnQuiz.classList.remove('active');
+    if (tabReports && tabQuiz && panelReports && panelQuiz) {
+      tabReports.onclick = function () {
+        tabReports.classList.add('active');
+        tabQuiz.classList.remove('active');
         panelReports.classList.add('active');
         panelQuiz.classList.remove('active');
       };
-      tabBtnQuiz.onclick = function () {
-        tabBtnQuiz.classList.add('active');
-        tabBtnReports.classList.remove('active');
+      tabQuiz.onclick = function () {
+        tabQuiz.classList.add('active');
+        tabReports.classList.remove('active');
         panelQuiz.classList.add('active');
         panelReports.classList.remove('active');
+        startQuizFlow();
       };
     }
 
+    // Assessments list
     var listContainer = document.getElementById('testsListContainer');
     if (listContainer) {
-      var tests = (STATE.tests || []).filter(function (t) {
-        return t.student_id === currentStudentId;
+      var studentTests = (STATE.tests || []).filter(function (t) {
+        var matchStudent = t.student_id === currentStudentId;
+        var matchCenter = currentCenterId === 'all'
+          ? (student.enrolled_centers || []).indexOf(t.center_id) !== -1
+          : t.center_id === currentCenterId;
+        return matchStudent && matchCenter;
       });
 
-      if (tests.length === 0) {
-        listContainer.innerHTML = '<div class="text-sm text-secondary p-12">No assessment scores recorded yet.</div>';
+      if (studentTests.length === 0) {
+        listContainer.innerHTML = '<div class="text-sm text-secondary">No assessments recorded for this faculty selection.</div>';
       } else {
-        listContainer.innerHTML = tests.map(function (test) {
+        listContainer.innerHTML = studentTests.map(function (test) {
           var pct = Math.round((test.marks_obtained / test.total_marks) * 100);
-          var badgeClass = pct >= 80 ? 'badge-success' : pct >= 60 ? 'badge-warning' : 'badge-error';
-          var grade = pct >= 85 ? 'A+' : pct >= 75 ? 'A' : pct >= 60 ? 'B' : 'C';
-
+          var centerObj = getCenterById(test.center_id);
           return (
-            '<div class="test-card">' +
-              '<div class="test-card-info">' +
-                '<div class="test-card-name">' + test.name + ' <span class="badge ' + badgeClass + '">' + grade + '</span></div>' +
-                '<div class="test-card-meta">' + test.subject + ' &bull; ' + test.date + ' &bull; ' + test.duration_min + ' mins</div>' +
+            '<div class="test-item">' +
+              '<div class="test-score-box">' +
+                '<span class="test-score-val">' + test.marks_obtained + '/' + test.total_marks + '</span>' +
+                '<span class="test-score-pct">' + pct + '%</span>' +
               '</div>' +
-              '<div class="test-card-score">' +
-                '<div class="test-score-value">' + test.marks_obtained + ' <span class="text-xs text-muted">/ ' + test.total_marks + '</span></div>' +
-                '<div class="text-xs fw-700" style="color:var(--primary);">' + pct + '% Score</div>' +
+              '<div class="test-info">' +
+                '<div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:2px;">' +
+                  '<span class="test-name">' + test.name + '</span>' +
+                  '<span class="center-tag" style="border-color:' + centerObj.color + '; color:' + centerObj.color + '; font-size:10px;">🏛️ ' + centerObj.name + '</span>' +
+                '</div>' +
+                '<div class="test-meta">' + test.date + ' &bull; Subject: ' + test.subject + ' &bull; Duration: ' + test.duration_min + 'm</div>' +
+                '<div class="text-xs text-muted" style="margin-top:4px;">Topics: ' + test.topics_tested.join(', ') + '</div>' +
               '</div>' +
             '</div>'
           );
@@ -1573,385 +2055,395 @@
       }
     }
 
-    var weakContainer = document.getElementById('weakTopicsList');
-    if (weakContainer) {
-      var allWeak = [];
-      (STATE.tests || []).forEach(function (t) {
-        if (t.student_id === currentStudentId && t.weak_topics) {
-          allWeak = allWeak.concat(t.weak_topics);
-        }
-      });
-      var uniqueWeak = allWeak.filter(function (item, pos) { return allWeak.indexOf(item) === pos; });
-      if (uniqueWeak.length === 0) uniqueWeak = ['Snell\'s Law', 'Division Algorithm', 'pH Scale Calculations', 'Precipitation Balancing'];
+    // Pure SVG Subject Score Chart
+    var chartContainer = document.getElementById('testsChartContainer');
+    if (chartContainer) {
+      var sampleSubjects = [
+        { name: 'Maths', score: 88, color: '#800020' },
+        { name: 'Physics', score: 76, color: '#9E1B32' },
+        { name: 'Chemistry', score: 92, color: '#B45309' },
+        { name: 'Biology', score: 90, color: '#D97706' },
+        { name: 'English', score: 80, color: '#701A75' }
+      ];
 
-      weakContainer.innerHTML = uniqueWeak.map(function (topic) {
-        return '<span class="weak-topic-chip">⚠️ ' + topic + '</span>';
+      var svgWidth = 320;
+      var svgHeight = 180;
+      var barWidth = 36;
+      var gap = 24;
+
+      var barsSvg = sampleSubjects.map(function (sub, idx) {
+        var x = 20 + idx * (barWidth + gap);
+        var barH = (sub.score / 100) * 130;
+        var y = 145 - barH;
+        return (
+          '<g>' +
+            '<rect x="' + x + '" y="' + y + '" width="' + barWidth + '" height="' + barH + '" rx="4" fill="' + sub.color + '"/>' +
+            '<text x="' + (x + barWidth / 2) + '" y="' + (y - 5) + '" text-anchor="middle" font-size="11" font-weight="700" fill="var(--text-main)">' + sub.score + '%</text>' +
+            '<text x="' + (x + barWidth / 2) + '" y="165" text-anchor="middle" font-size="10" font-weight="600" fill="var(--text-secondary)">' + sub.name.substring(0, 4) + '</text>' +
+          '</g>'
+        );
       }).join('');
+
+      chartContainer.innerHTML =
+        '<svg width="100%" height="180" viewBox="0 0 ' + svgWidth + ' ' + svgHeight + '">' +
+          '<line x1="10" y1="145" x2="310" y2="145" stroke="var(--border)" stroke-width="1.5"/>' +
+          barsSvg +
+        '</svg>';
     }
 
-    drawScoresChart();
-    setupQuizFlow();
+    // Weak topics diagnostic
+    var weakContainer = document.getElementById('testsWeakTopicsContainer');
+    if (weakContainer) {
+      var studentTests = (STATE.tests || []).filter(function (t) { return t.student_id === currentStudentId; });
+      var weakList = [];
+      studentTests.forEach(function (t) {
+        (t.weak_topics || []).forEach(function (w) {
+          if (weakList.indexOf(w) === -1) weakList.push(w);
+        });
+      });
+
+      if (weakList.length === 0) {
+        weakContainer.innerHTML = '<div class="text-sm text-secondary">Excellent! No recurring weak concepts detected.</div>';
+      } else {
+        weakContainer.innerHTML = weakList.map(function (w) {
+          return '<div class="weak-topic-tag">⚠️ ' + w + '</div>';
+        }).join('');
+      }
+    }
   }
 
-  function drawScoresChart() {
-    var chartContainer = document.getElementById('chartContainer');
-    if (!chartContainer) return;
-
-    var subjects = ['Maths', 'Physics', 'Chemistry', 'Biology', 'English'];
-    var scores = [88, 72, 85, 87, 80];
-
-    var svgWidth = 460;
-    var svgHeight = 220;
-    var paddingLeft = 45;
-    var paddingBottom = 35;
-    var chartW = svgWidth - paddingLeft - 20;
-    var chartH = svgHeight - paddingBottom - 20;
-
-    var barWidth = 44;
-    var barGap = (chartW - (barWidth * subjects.length)) / (subjects.length + 1);
-
-    var barsHtml = '';
-    [0, 50, 100].forEach(function (yVal) {
-      var yPos = chartH - (yVal / 100 * chartH) + 15;
-      barsHtml +=
-        '<line x1="' + paddingLeft + '" y1="' + yPos + '" x2="' + (svgWidth - 20) + '" y2="' + yPos + '" stroke="var(--border)" stroke-dasharray="3,3" />' +
-        '<text x="' + (paddingLeft - 8) + '" y="' + (yPos + 4) + '" text-anchor="end" font-size="10" fill="var(--text-muted)">' + yVal + '%</text>';
-    });
-
-    subjects.forEach(function (subj, i) {
-      var score = scores[i] || 75;
-      var h = (score / 100) * chartH;
-      var x = paddingLeft + barGap + i * (barWidth + barGap);
-      var y = chartH - h + 15;
-      var barColor = score >= 85 ? 'var(--accent)' : score >= 75 ? 'var(--primary)' : 'var(--warning)';
-
-      barsHtml +=
-        '<rect x="' + x + '" y="' + y + '" width="' + barWidth + '" height="' + h + '" rx="5" fill="' + barColor + '"/>' +
-        '<text x="' + (x + barWidth / 2) + '" y="' + (y - 6) + '" text-anchor="middle" font-size="11" font-weight="800" fill="var(--text-main)">' + score + '%</text>' +
-        '<text x="' + (x + barWidth / 2) + '" y="' + (svgHeight - 10) + '" text-anchor="middle" font-size="11" font-weight="600" fill="var(--text-secondary)">' + subj.substring(0, 4) + '</text>';
-    });
-
-    chartContainer.innerHTML =
-      '<svg viewBox="0 0 ' + svgWidth + ' ' + svgHeight + '" preserveAspectRatio="xMidYMid meet" style="width:100%; height:auto;">' +
-        barsHtml +
-      '</svg>';
+  // ─── 19. INTERACTIVE 5-MCQ QUIZ FLOW ───────────────────────────────────────
+  function startQuizFlow() {
+    activeQuizIndex = 0;
+    quizScore = 0;
+    quizAnswered = false;
+    renderCurrentQuestion();
   }
 
-  function setupQuizFlow() {
+  function renderCurrentQuestion() {
+    var quizBody = document.getElementById('quizQuestionsBody');
+    var quizResult = document.getElementById('quizResultScreen');
+    if (!quizBody) return;
+
     var mcqs = DATA.mcqs || [];
-    var qNum = document.getElementById('quizQuestionNum');
-    var pBar = document.getElementById('quizProgressBar');
-    var badge = document.getElementById('quizSubjectBadge');
-    var qText = document.getElementById('quizQuestionText');
-    var optContainer = document.getElementById('quizOptionsContainer');
-    var explBox = document.getElementById('quizExplanation');
-    var nextBtn = document.getElementById('btnNextQuizQuestion');
-    var activeView = document.getElementById('quizActiveView');
-    var resultView = document.getElementById('quizResultView');
-    var resultScore = document.getElementById('quizResultScore');
-    var restartBtn = document.getElementById('btnRestartQuiz');
+    if (activeQuizIndex >= mcqs.length) {
+      // Show quiz results
+      if (quizBody) quizBody.style.display = 'none';
+      if (quizResult) {
+        quizResult.style.display = 'block';
+        var scoreVal = document.getElementById('quizFinalScore');
+        if (scoreVal) scoreVal.textContent = quizScore + ' / ' + mcqs.length;
 
-    if (!qText || mcqs.length === 0) return;
+        STATE.points += quizScore * 10;
+        STATE.points_history.unshift({
+          id: 'ph-quiz-' + Date.now(),
+          student_id: currentStudentId,
+          date: new Date().toISOString().split('T')[0],
+          action: 'quiz_completed',
+          points: quizScore * 10,
+          description: 'Practice MCQ Challenge score: ' + quizScore + '/' + mcqs.length
+        });
 
-    function renderQuestion(index) {
-      activeQuizIndex = index;
-      quizAnswered = false;
-      var q = mcqs[index];
+        Store.set('vs_points', STATE.points);
+        Store.set('vs_points_history', STATE.points_history);
+        showToast('Quiz graded! +' + (quizScore * 10) + ' study points credited!', 'success', 3500);
+      }
+      return;
+    }
 
-      if (qNum) qNum.textContent = 'Question ' + (index + 1) + ' of ' + mcqs.length;
-      if (pBar) pBar.style.width = (((index + 1) / mcqs.length) * 100) + '%';
-      if (badge) badge.textContent = q.subject;
-      if (qText) qText.textContent = q.question;
-      if (explBox) explBox.classList.remove('visible');
-      if (nextBtn) nextBtn.disabled = true;
+    if (quizResult) quizResult.style.display = 'none';
+    if (quizBody) quizBody.style.display = 'block';
 
-      if (optContainer) {
-        optContainer.innerHTML = Object.keys(q.options).map(function (key) {
+    var q = mcqs[activeQuizIndex];
+    quizAnswered = false;
+
+    quizBody.innerHTML =
+      '<div style="margin-bottom:14px;">' +
+        '<span class="badge badge-primary text-xs mb-8">Question ' + (activeQuizIndex + 1) + ' of ' + mcqs.length + ' &bull; ' + q.subject + '</span>' +
+        '<h3 class="text-base fw-700" style="color:var(--text-main); margin-top:6px;">' + q.question + '</h3>' +
+      '</div>' +
+      '<div class="mcq-options-grid" style="display:flex; flex-direction:column; gap:8px; margin-bottom:16px;">' +
+        ['a', 'b', 'c', 'd'].map(function (optKey) {
           return (
-            '<button type="button" class="quiz-option" data-opt-key="' + key + '">' +
-              '<span class="fw-800" style="width:22px; text-transform:uppercase;">' + key + '.</span> ' +
-              q.options[key] +
+            '<button type="button" class="btn btn-secondary mcq-choice-btn" data-opt="' + optKey + '" style="text-align:left; justify-content:flex-start; padding:10px 14px;">' +
+              '<strong>' + optKey.toUpperCase() + '.</strong> &nbsp; ' + q.options[optKey] +
             '</button>'
           );
-        }).join('');
+        }).join('') +
+      '</div>' +
+      '<div id="mcqExplanationBox" style="display:none; padding:12px; border-radius:var(--radius-sm); margin-bottom:16px; font-size:13px;"></div>' +
+      '<button type="button" class="btn btn-primary" id="btnNextQuizQuestion" style="display:none;">Next Question &rarr;</button>';
 
-        var optBtns = optContainer.querySelectorAll('.quiz-option');
-        optBtns.forEach(function (btn) {
-          btn.addEventListener('click', function () {
-            if (quizAnswered) return;
-            quizAnswered = true;
-            var chosenKey = this.getAttribute('data-opt-key');
-            var isCorrect = chosenKey === q.correct;
+    var choiceBtns = quizBody.querySelectorAll('.mcq-choice-btn');
+    var explanationBox = quizBody.querySelector('#mcqExplanationBox');
+    var nextBtn = quizBody.querySelector('#btnNextQuizQuestion');
 
-            if (isCorrect) {
-              this.classList.add('correct');
-              quizScore++;
-              showToast('Correct answer! 🌟', 'success', 1500);
-            } else {
-              this.classList.add('wrong');
-              var correctBtn = optContainer.querySelector('.quiz-option[data-opt-key="' + q.correct + '"]');
-              if (correctBtn) correctBtn.classList.add('correct');
-              showToast('Incorrect', 'error', 1500);
-            }
+    choiceBtns.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        if (quizAnswered) return;
+        quizAnswered = true;
+        var chosen = this.getAttribute('data-opt');
+        var isCorrect = chosen === q.correct;
+        if (isCorrect) quizScore++;
 
-            if (explBox) {
-              explBox.textContent = 'Explanation: ' + q.explanation;
-              explBox.classList.add('visible');
-            }
-
-            if (nextBtn) nextBtn.disabled = false;
-          });
+        choiceBtns.forEach(function (b) {
+          b.disabled = true;
+          var k = b.getAttribute('data-opt');
+          if (k === q.correct) {
+            b.classList.add('mcq-correct');
+            b.style.borderColor = 'var(--accent)';
+            b.style.background = 'var(--accent-subtle)';
+          } else if (k === chosen && !isCorrect) {
+            b.classList.add('mcq-wrong');
+            b.style.borderColor = 'var(--error)';
+            b.style.background = 'var(--error-bg)';
+          }
         });
-      }
-    }
 
-    if (nextBtn) {
-      nextBtn.onclick = function () {
-        if (activeQuizIndex < mcqs.length - 1) {
-          renderQuestion(activeQuizIndex + 1);
-        } else {
-          if (activeView) activeView.style.display = 'none';
-          if (resultView) resultView.classList.add('visible');
-          if (resultScore) resultScore.textContent = quizScore + ' / ' + mcqs.length;
-
-          var ptsAwarded = quizScore * 10 + 10;
-          STATE.points += ptsAwarded;
-          STATE.points_history.unshift({
-            id: 'ph-quiz-' + Date.now(),
-            student_id: currentStudentId,
-            date: new Date().toISOString().split('T')[0],
-            action: 'quiz_completed',
-            points: ptsAwarded,
-            description: 'Practice quiz completed: ' + quizScore + '/' + mcqs.length + ' correct'
-          });
-
-          Store.set('vs_points', STATE.points);
-          Store.set('vs_points_history', STATE.points_history);
-          showToast('Assessment results recorded! (+' + ptsAwarded + ' pts)', 'success', 3500);
+        if (explanationBox) {
+          explanationBox.style.display = 'block';
+          explanationBox.style.background = isCorrect ? 'var(--accent-subtle)' : 'var(--error-bg)';
+          explanationBox.style.border = '1px solid ' + (isCorrect ? 'var(--accent)' : 'var(--error)');
+          explanationBox.innerHTML =
+            '<strong>' + (isCorrect ? '✅ Correct!' : '❌ Incorrect.') + '</strong> ' + q.explanation;
         }
-      };
-    }
 
-    if (restartBtn) {
-      restartBtn.onclick = function () {
-        quizScore = 0;
-        if (resultView) resultView.classList.remove('visible');
-        if (activeView) activeView.style.display = 'block';
-        renderQuestion(0);
-      };
-    }
-
-    renderQuestion(0);
+        if (nextBtn) {
+          nextBtn.style.display = 'inline-flex';
+          nextBtn.onclick = function () {
+            activeQuizIndex++;
+            renderCurrentQuestion();
+          };
+        }
+      });
+    });
   }
 
-  // ─── 15. PAGE: POINTS & REWARDS ────────────────────────────────────────────
+  // ─── 20. PAGE: POINTS, STREAKS & BADGES ────────────────────────────────────
   function renderPointsView() {
-    var bigTotal = document.getElementById('pointsBigTotal');
-    var bigStreak = document.getElementById('pointsBigStreak');
-    var rankDisp = document.getElementById('pointsRankDisplay');
-    var badgesGrid = document.getElementById('badgesContainer');
-    var lbList = document.getElementById('leaderboardList');
-    var phList = document.getElementById('pointsHistoryList');
-    var toggleRank = document.getElementById('toggleShowRank');
+    var student = getActiveStudent();
+    var ptsDisplay = document.getElementById('pointsTotalDisplay');
+    var streakDisplay = document.getElementById('pointsStreakDisplay');
+    if (ptsDisplay) ptsDisplay.textContent = (student.points || STATE.points).toLocaleString();
+    if (streakDisplay) streakDisplay.textContent = (student.streak || STATE.streak) + ' Days';
 
-    if (bigTotal) bigTotal.textContent = STATE.points.toLocaleString();
-    if (bigStreak) bigStreak.textContent = STATE.streak + ' Days 🔥';
-    if (rankDisp) rankDisp.textContent = '#7';
+    // Leaderboard
+    var lbContainer = document.getElementById('leaderboardList');
+    var showRankToggle = document.getElementById('toggleShowRank');
+    if (lbContainer) {
+      var fullBoard = DATA.leaderboard || [];
+      var top5 = fullBoard.slice(0, 5);
+      var showSelf = showRankToggle ? showRankToggle.checked : true;
 
-    if (badgesGrid) {
-      badgesGrid.innerHTML = (STATE.badges || []).map(function (b) {
-        var cls = b.earned ? 'badge-award-card earned' : 'badge-award-card unearned';
+      var rows = top5.slice();
+      if (showSelf) {
+        var selfEntry = fullBoard.find(function (e) { return e.is_self; });
+        if (selfEntry && top5.indexOf(selfEntry) === -1) {
+          rows.push(selfEntry);
+        }
+      }
+
+      lbContainer.innerHTML = rows.map(function (row) {
         return (
-          '<div class="' + cls + '">' +
-            '<div class="badge-award-emoji">' + b.icon_emoji + '</div>' +
-            '<div class="badge-award-name">' + b.name + '</div>' +
-            '<div class="badge-award-desc">' + b.description + '</div>' +
-            (b.earned ? '<span class="badge badge-accent mt-8" style="font-size:9px;">Unlocked</span>' : '<span class="badge badge-neutral mt-8" style="font-size:9px;">Locked</span>') +
+          '<div class="leaderboard-row ' + (row.is_self ? 'self-highlight' : '') + '">' +
+            '<span class="lb-rank">' + row.badge + ' #' + row.rank + '</span>' +
+            '<span class="lb-name">' + row.student_name + (row.is_self ? ' <strong>(You)</strong>' : '') + '</span>' +
+            '<span class="text-xs text-muted" style="margin-left:auto; margin-right:12px;">' + (row.center || 'Stellar Academy') + '</span>' +
+            '<span class="lb-pts">' + row.points.toLocaleString() + ' pts</span>' +
           '</div>'
         );
       }).join('');
+
+      if (showRankToggle) {
+        showRankToggle.onchange = function () { renderPointsView(); };
+      }
     }
 
-    function renderLeaderboard(showSelf) {
-      if (!lbList) return;
-      var raw = STATE.leaderboard || [];
-      var top5 = raw.slice(0, 5);
-      var selfEntry = raw.find(function (item) { return item.is_self; }) || {
-        rank: 7, student_name: getActiveStudent().name, points: STATE.points, badge: '⭐', is_self: true
-      };
-
-      var entriesToDisplay = [].concat(top5);
-      if (showSelf && selfEntry.rank > 5) {
-        entriesToDisplay.push(selfEntry);
-      }
-
-      lbList.innerHTML = entriesToDisplay.map(function (entry) {
-        var rClass = entry.rank === 1 ? 'rank-1' : entry.rank === 2 ? 'rank-2' : entry.rank === 3 ? 'rank-3' : 'rank-other';
-        var isSelf = entry.is_self;
-
+    // Points History
+    var histContainer = document.getElementById('pointsHistoryList');
+    if (histContainer) {
+      var hist = STATE.points_history || DATA.points_history || [];
+      histContainer.innerHTML = hist.slice(0, 8).map(function (h) {
         return (
-          '<div class="leaderboard-item' + (isSelf ? ' self' : '') + '">' +
-            '<div class="rank-badge ' + rClass + '">' + entry.rank + '</div>' +
-            '<div class="leaderboard-name">' +
-              entry.student_name + ' ' + (isSelf ? '<span class="badge badge-primary">You</span>' : '') +
+          '<div class="points-history-item">' +
+            '<div style="flex:1;">' +
+              '<div class="text-sm fw-700">' + h.description + '</div>' +
+              '<div class="text-xs text-muted">' + h.date + '</div>' +
             '</div>' +
-            '<div class="leaderboard-points">' + (isSelf ? STATE.points : entry.points).toLocaleString() + ' pts</div>' +
+            '<span class="badge badge-accent">+' + h.points + ' pts</span>' +
           '</div>'
         );
       }).join('');
     }
 
-    renderLeaderboard(toggleRank ? toggleRank.checked : true);
-
-    if (toggleRank) {
-      toggleRank.onchange = function () {
-        renderLeaderboard(this.checked);
-      };
-    }
-
-    if (phList) {
-      var history = STATE.points_history || [];
-      if (history.length === 0) {
-        phList.innerHTML = '<div class="text-sm text-secondary p-12">No point activities recorded yet.</div>';
-      } else {
-        phList.innerHTML = history.slice(0, 8).map(function (h) {
-          return (
-            '<div class="ph-item">' +
-              '<div class="ph-icon" style="background:var(--primary-subtle); color:var(--primary);">⭐</div>' +
-              '<div class="ph-desc">' +
-                '<div>' + h.description + '</div>' +
-                '<div class="ph-date">' + h.date + '</div>' +
-              '</div>' +
-              '<div class="ph-pts">+' + h.points + '</div>' +
-            '</div>'
-          );
-        }).join('');
-      }
+    // Badges Grid
+    var badgesContainer = document.getElementById('badgesGrid');
+    if (badgesContainer) {
+      var badges = STATE.badges || DATA.badges || [];
+      badgesContainer.innerHTML = badges.map(function (b) {
+        return (
+          '<div class="badge-card ' + (b.earned ? 'earned' : 'locked') + '">' +
+            '<div class="badge-icon-emoji">' + b.icon_emoji + '</div>' +
+            '<h4 class="text-sm fw-700">' + b.name + '</h4>' +
+            '<p class="text-xs text-muted">' + b.description + '</p>' +
+            '<span class="badge ' + (b.earned ? 'badge-accent' : 'badge-neutral') + ' text-xs" style="margin-top:8px;">' +
+              (b.earned ? 'Unlocked on ' + b.earned_date : '🔒 Locked') +
+            '</span>' +
+          '</div>'
+        );
+      }).join('');
     }
   }
 
-  // ─── 16. PAGE: MARKSHEETS & CERTIFICATES ───────────────────────────────────
-  function generateQrPattern(code) {
-    var hash = 0;
-    for (var i = 0; i < code.length; i++) {
-      hash = ((hash << 5) - hash) + code.charCodeAt(i);
-      hash |= 0;
-    }
-
-    var cellsHtml = '';
-    for (var r = 0; r < 9; r++) {
-      for (var c = 0; c < 9; c++) {
-        var isCorner = (r < 3 && c < 3) || (r < 3 && c > 5) || (r > 5 && c < 3);
-        var bit = isCorner || (((hash >> ((r * 9 + c) % 31)) & 1) === 1);
-        var cellColor = bit ? '#0F172A' : '#FFFFFF';
-        cellsHtml += '<div class="doc-qr-cell" style="background:' + cellColor + ';"></div>';
-      }
-    }
-    return cellsHtml;
-  }
-
+  // ─── 21. PAGE: MARKSHEETS & CERTIFICATES ───────────────────────────────────
   function renderMarksheetView() {
+    var student = getActiveStudent();
+    renderTeacherHeroCard('marksheetTeacherHeroContainer');
+
+    var listContainer = document.getElementById('docsCardsList');
     var listView = document.getElementById('docsListView');
     var docViewer = document.getElementById('docViewer');
-    var cardsContainer = document.getElementById('docsCardsList');
     var backBtn = document.getElementById('btnBackToDocsList');
     var printBtn = document.getElementById('btnPrintDocument');
 
-    var docs = (DATA.documents || []).filter(function (d) {
-      return d.student_id === currentStudentId;
+    var activeDocs = (STATE.documents || []).filter(function (d) {
+      var matchStudent = d.student_id === currentStudentId;
+      var matchCenter = currentCenterId === 'all'
+        ? (student.enrolled_centers || []).indexOf(d.center_id) !== -1
+        : d.center_id === currentCenterId;
+      return matchStudent && matchCenter;
     });
 
-    if (cardsContainer) {
-      cardsContainer.innerHTML = docs.map(function (doc) {
-        var isCert = doc.type === 'certificate';
-        var iconSvg = isCert
-          ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>'
-          : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>';
+    if (listContainer) {
+      if (activeDocs.length === 0) {
+        listContainer.innerHTML = '<div class="card text-center p-24 text-muted">No academic documents issued by this faculty selection.</div>';
+      } else {
+        listContainer.innerHTML = activeDocs.map(function (doc) {
+          var centerObj = getCenterById(doc.center_id);
+          var isValid = doc.status === 'valid';
+          return (
+            '<div class="card doc-item-card">' +
+              '<div style="font-size:36px; margin-bottom:8px;">' + (doc.type === 'marksheet' ? '📜' : '🎖️') + '</div>' +
+              '<div style="display:flex; gap:6px; align-items:center; margin-bottom:6px;">' +
+                '<span class="badge badge-primary text-xs">' + doc.type.toUpperCase() + '</span>' +
+                '<span class="center-tag" style="border-color:' + centerObj.color + '; color:' + centerObj.color + '; font-size:10px;">🏛️ ' + centerObj.name + '</span>' +
+                '<span class="badge ' + (isValid ? 'badge-success' : 'badge-error') + ' text-xs">' + doc.status.toUpperCase() + '</span>' +
+              '</div>' +
+              '<h3 class="text-base fw-700" style="margin-bottom:4px;">' + doc.title + '</h3>' +
+              '<p class="text-xs text-muted mb-12">Issued on: ' + doc.issue_date + ' &bull; Verification Code: <code>' + doc.code + '</code></p>' +
+              '<div style="display:flex; justify-content:space-between; align-items:center; background:var(--surface-muted); padding:8px 12px; border-radius:var(--radius-sm); margin-bottom:14px;">' +
+                '<span class="text-xs text-muted">Cumulative Score:</span>' +
+                '<span class="fw-800" style="color:var(--primary);">' + doc.total_obtained + '/' + doc.total_max + ' (' + doc.percentage + '%)</span>' +
+              '</div>' +
+              '<button type="button" class="btn btn-primary btn-sm btn-view-doc" data-doc-id="' + doc.id + '">' +
+                'View &amp; Print Certificate' +
+              '</button>' +
+            '</div>'
+          );
+        }).join('');
 
-        var statusBadge = doc.status === 'valid'
-          ? '<span class="badge badge-success">VALID</span>'
-          : '<span class="badge badge-error">REVOKED</span>';
-
-        return (
-          '<div class="doc-list-card">' +
-            '<div class="doc-list-icon">' + iconSvg + '</div>' +
-            '<div class="doc-list-info">' +
-              '<div class="doc-list-title">' + doc.title + ' ' + statusBadge + '</div>' +
-              '<div class="doc-list-meta">Issue Date: ' + doc.issue_date + ' &bull; Verification Code: <code>' + doc.code + '</code></div>' +
-            '</div>' +
-            '<button type="button" class="btn btn-sm btn-primary btn-view-doc" data-doc-id="' + doc.id + '">View &amp; Print</button>' +
-          '</div>'
-        );
-      }).join('');
-
-      var viewBtns = cardsContainer.querySelectorAll('.btn-view-doc');
-      viewBtns.forEach(function (btn) {
-        btn.addEventListener('click', function () {
-          var did = this.getAttribute('data-doc-id');
-          var doc = docs.find(function (d) { return d.id === did; });
-          if (doc) showDocument(doc);
+        var viewBtns = listContainer.querySelectorAll('.btn-view-doc');
+        viewBtns.forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            var docId = this.getAttribute('data-doc-id');
+            var doc = activeDocs.find(function (d) { return d.id === docId; });
+            if (doc) displayPrintableDoc(doc);
+          });
         });
-      });
+      }
     }
 
-    function showDocument(doc) {
+    function displayPrintableDoc(doc) {
       currentDocViewing = doc;
-      var student = getActiveStudent();
-
       if (listView) listView.style.display = 'none';
       if (docViewer) docViewer.classList.add('active');
 
-      var examEl = document.getElementById('docRenderExamName');
-      var nameEl = document.getElementById('docRenderStudentName');
-      var rollEl = document.getElementById('docRenderRoll');
-      var dateEl = document.getElementById('docRenderIssueDate');
-      var codeEl = document.getElementById('docRenderCode');
-      var statusEl = document.getElementById('docRenderStatus');
-      var marksTbody = document.getElementById('docMarksTableBody');
-      var totalMarksEl = document.getElementById('docRenderTotalMarks');
-      var pctEl = document.getElementById('docRenderPercentage');
-      var gradeEl = document.getElementById('docRenderGrade');
-      var attEl = document.getElementById('docRenderAttendance');
-      var qrBox = document.getElementById('docQrGraphic');
+      var container = document.getElementById('printableDocContainer');
+      if (!container) return;
 
-      if (examEl) examEl.textContent = doc.exam_name || doc.title;
-      if (nameEl) nameEl.textContent = student.name;
-      if (rollEl) rollEl.textContent = student.roll;
-      if (dateEl) dateEl.textContent = doc.issue_date;
-      if (codeEl) codeEl.textContent = doc.code;
-      if (statusEl) {
-        statusEl.innerHTML = doc.status === 'valid'
-          ? '<span class="badge badge-success">VALID &amp; AUTHENTIC</span>'
-          : '<span class="badge badge-error">REVOKED RECORD</span>';
-      }
+      var centerObj = getCenterById(doc.center_id);
 
-      if (marksTbody && doc.subject_marks) {
-        marksTbody.innerHTML = doc.subject_marks.map(function (sm) {
-          var sPct = Math.round((sm.obtained / sm.max) * 100);
-          return (
-            '<tr>' +
-              '<td class="fw-700">' + sm.subject + '</td>' +
-              '<td>' + sm.max + '</td>' +
-              '<td>' + sm.obtained + '</td>' +
-              '<td>' + sPct + '%</td>' +
-            '</tr>'
-          );
-        }).join('') +
-        '<tr class="doc-total-row">' +
-          '<td>TOTAL SCORE</td>' +
-          '<td>' + doc.total_max + '</td>' +
-          '<td>' + doc.total_obtained + '</td>' +
-          '<td>' + doc.percentage + '%</td>' +
-        '</tr>';
-      }
+      var marksRowsHtml = doc.subject_marks.map(function (m) {
+        var pct = Math.round((m.obtained / m.max) * 100);
+        return (
+          '<tr>' +
+            '<td class="fw-700">' + m.subject + '</td>' +
+            '<td>' + m.max + '</td>' +
+            '<td class="fw-800">' + m.obtained + '</td>' +
+            '<td>' + pct + '%</td>' +
+          '</tr>'
+        );
+      }).join('');
 
-      if (totalMarksEl) totalMarksEl.textContent = doc.total_obtained + ' / ' + doc.total_max;
-      if (pctEl) pctEl.textContent = doc.percentage + '%';
-      if (gradeEl) gradeEl.textContent = doc.grade;
-      if (attEl) attEl.textContent = doc.attendance_percent + '%';
-      if (qrBox) qrBox.innerHTML = generateQrPattern(doc.code);
+      container.innerHTML =
+        '<div class="doc-header">' +
+          '<div class="doc-logo-box" style="background: linear-gradient(135deg, ' + centerObj.color + ', #4C0519);">' + centerObj.logo_text + '</div>' +
+          '<div class="doc-center-name">' + (doc.center_name || centerObj.name) + '</div>' +
+          '<div class="doc-center-addr">' + (centerObj.address || 'Accredited STEM & Board Coaching Partner') + '</div>' +
+          '<div class="doc-exam-name">' + doc.exam_name + '</div>' +
+        '</div>' +
 
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+        '<table class="doc-student-table">' +
+          '<tr>' +
+            '<td>Candidate Name:</td><td class="fw-700">' + student.name + '</td>' +
+            '<td>Roll Registration:</td><td class="fw-700">' + student.roll + '</td>' +
+          '</tr>' +
+          '<tr>' +
+            '<td>Academic Class:</td><td>' + student.class + ' (' + student.board + ')</td>' +
+            '<td>Date of Issue:</td><td>' + doc.issue_date + '</td>' +
+          '</tr>' +
+          '<tr>' +
+            '<td>Verification Ref:</td><td><code>' + doc.code + '</code></td>' +
+            '<td>Credential Status:</td><td><span class="badge ' + (doc.status === 'valid' ? 'badge-success' : 'badge-error') + '">' + doc.status.toUpperCase() + '</span></td>' +
+          '</tr>' +
+        '</table>' +
+
+        '<table class="doc-marks-table">' +
+          '<thead>' +
+            '<tr><th>Curriculum Discipline</th><th>Maximum Marks</th><th>Marks Scored</th><th>Percentage</th></tr>' +
+          '</thead>' +
+          '<tbody>' +
+            marksRowsHtml +
+            '<tr class="doc-total-row">' +
+              '<td>GRAND AGGREGATE</td>' +
+              '<td>' + doc.total_max + '</td>' +
+              '<td>' + doc.total_obtained + '</td>' +
+              '<td>' + doc.percentage + '%</td>' +
+            '</tr>' +
+          '</tbody>' +
+        '</table>' +
+
+        '<div class="doc-summary">' +
+          '<div style="flex:1;">' +
+            '<div class="doc-summary-label">Final Evaluation Grade</div>' +
+            '<div class="doc-summary-value">' + doc.grade + '</div>' +
+          '</div>' +
+          '<div style="flex:1;">' +
+            '<div class="doc-summary-label">Academic Attendance</div>' +
+            '<div class="doc-summary-value">' + doc.attendance_percent + '%</div>' +
+          '</div>' +
+          '<div style="flex:1;">' +
+            '<div class="doc-summary-label">Result Classification</div>' +
+            '<div class="doc-summary-value" style="color:var(--accent);">DISTINCTION</div>' +
+          '</div>' +
+        '</div>' +
+
+        '<div style="display:flex; justify-content:space-between; align-items:flex-end; border-top:1px solid #E8DDDD; padding-top:20px;">' +
+          '<div style="text-align:center;">' +
+            '<div style="font-family:serif; font-style:italic; font-size:18px; color:#574147;">' + (doc.director_name || centerObj.teacher_name) + '</div>' +
+            '<div style="border-top:1px solid #7E636B; width:180px; margin-top:4px; font-size:11px; color:#7E636B;">Authorized Academic Signatory</div>' +
+          '</div>' +
+          '<div style="text-align:right;">' +
+            '<div style="font-family:var(--font-mono); font-size:11px; color:#7E636B;">AUTHENTICITY VERIFICATION</div>' +
+            '<div style="font-size:12px; font-weight:700; color:var(--primary); font-family:var(--font-mono);">' + doc.code + '</div>' +
+          '</div>' +
+        '</div>' +
+
+        '<div class="doc-disclaimer">' +
+          'Issued by ' + (doc.center_name || centerObj.name) + '. Not a board or university certificate. Internal coaching evaluation credential.' +
+        '</div>';
+
+      window.scrollTo(0, 0);
     }
 
     if (backBtn) {
@@ -1968,7 +2460,7 @@
     }
   }
 
-  // ─── 17. PAGE: VERIFY ──────────────────────────────────────────────────────
+  // ─── 22. PAGE: VERIFY CREDENTIAL ───────────────────────────────────────────
   function renderVerifyView(presetCode) {
     var form = document.getElementById('verifyForm');
     var input = document.getElementById('verifyCodeInput');
@@ -1978,43 +2470,32 @@
       var trimmed = (code || '').trim().toUpperCase();
       if (!trimmed) return;
 
-      var match = (DATA.documents || []).find(function (d) {
-        return d.code.toUpperCase() === trimmed;
-      });
+      var allDocs = STATE.documents || DATA.documents || [];
+      var found = allDocs.find(function (d) { return d.code.toUpperCase() === trimmed; });
 
-      if (!resContainer) return;
-      resContainer.style.display = 'block';
-
-      if (match) {
-        var student = (DATA.students || []).find(function (s) { return s.id === match.student_id; }) || { name: 'Aryan Mehta' };
-        var isValid = match.status === 'valid';
-        var cardClass = isValid ? 'verify-result-card valid' : 'verify-result-card revoked';
-        var statusBadge = isValid
-          ? '<span class="badge badge-success">AUTHENTIC &amp; ACTIVE</span>'
-          : '<span class="badge badge-error">REVOKED / CANCELLED</span>';
+      if (found) {
+        var student = (STATE.students || []).find(function (s) { return s.id === found.student_id; }) || { name: 'Aryan Mehta' };
+        var centerObj = getCenterById(found.center_id);
+        var isValid = found.status === 'valid';
 
         resContainer.innerHTML =
-          '<div class="' + cardClass + '">' +
-            '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">' +
+          '<div class="card p-24" style="border-left: 4px solid ' + (isValid ? 'var(--accent)' : 'var(--error)') + ';">' +
+            '<div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px;">' +
               '<div>' +
-                '<span class="text-xs text-muted uppercase fw-700">Verification Confirmation</span>' +
-                '<h3 class="text-lg fw-800" style="color:var(--text-main); margin-top:2px;">' + match.title + '</h3>' +
+                '<h3 class="text-lg fw-800">' + (found.center_name || centerObj.name) + '</h3>' +
+                '<p class="text-xs text-muted">Official Coaching Certificate Registry</p>' +
               '</div>' +
-              statusBadge +
+              '<span class="badge ' + (isValid ? 'badge-success' : 'badge-error') + ' text-sm">' + (isValid ? '✅ VALID CREDENTIAL' : '❌ REVOKED / EXPIRED') + '</span>' +
             '</div>' +
-            '<table style="width:100%; font-size:var(--text-sm);">' +
-              '<tr><td style="color:var(--text-secondary); width:130px; padding:4px 0;">Issuing Center:</td><td class="fw-700">' + (DATA.center ? DATA.center.name : 'Stellar Academy') + '</td></tr>' +
-              '<tr><td style="color:var(--text-secondary); padding:4px 0;">Candidate Name:</td><td class="fw-700">' + student.name + '</td></tr>' +
-              '<tr><td style="color:var(--text-secondary); padding:4px 0;">Examination:</td><td>' + match.exam_name + '</td></tr>' +
-              '<tr><td style="color:var(--text-secondary); padding:4px 0;">Date of Issue:</td><td>' + match.issue_date + '</td></tr>' +
-              '<tr><td style="color:var(--text-secondary); padding:4px 0;">Document Code:</td><td><code>' + match.code + '</code></td></tr>' +
-            '</table>' +
-            '<div class="text-xs text-muted" style="margin-top:14px; border-top:1px solid var(--border); padding-top:8px;">' +
-              'Protected credential lookup &bull; No sensitive contact details exposed.' +
+            '<div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; font-size:13px;">' +
+              '<div><span class="text-muted">Student Name:</span> <strong>' + student.name + '</strong></div>' +
+              '<div><span class="text-muted">Evaluation Exam:</span> <strong>' + found.exam_name + '</strong></div>' +
+              '<div><span class="text-muted">Issue Date:</span> <strong>' + found.issue_date + '</strong></div>' +
+              '<div><span class="text-muted">Verification Ref:</span> <code>' + found.code + '</code></div>' +
             '</div>' +
           '</div>';
 
-        showToast(isValid ? 'Document authenticated successfully!' : 'Record identified: status is REVOKED', isValid ? 'success' : 'error', 3000);
+        showToast(isValid ? 'Document authenticated successfully!' : 'Record found: Status is REVOKED', isValid ? 'success' : 'error', 3000);
       } else {
         resContainer.innerHTML =
           '<div class="card text-center p-24" style="border-color:var(--error);">' +
@@ -2039,9 +2520,10 @@
     }
   }
 
-  // ─── 18. PAGE: SETTINGS ────────────────────────────────────────────────────
+  // ─── 23. PAGE: SETTINGS & HOUSEHOLD PROFILES ───────────────────────────────
   function renderSettingsView() {
     var student = getActiveStudent();
+    var allStudents = STATE.students || DATA.students || [];
 
     var avatar = document.getElementById('settingsAvatar');
     var nameEl = document.getElementById('settingsName');
@@ -2051,9 +2533,9 @@
     var themeToggle = document.getElementById('settingsThemeToggle');
     var resetBtn = document.getElementById('btnResetDemoData');
 
-    if (avatar) avatar.textContent = student.photo_initials;
+    if (avatar) avatar.textContent = student.photo_initials || 'ST';
     if (nameEl) nameEl.textContent = student.name;
-    if (rollEl) rollEl.textContent = 'Roll No: ' + student.roll + ' • Class 10 Morning Batch';
+    if (rollEl) rollEl.textContent = 'Roll No: ' + student.roll + ' • ' + (student.class || 'Class 10') + ' (' + (student.board || 'CBSE') + ')';
     if (parentEl) parentEl.textContent = student.parent_name + ' (' + student.parent_phone + ')';
     if (dobEl) dobEl.textContent = student.dob;
 
@@ -2066,9 +2548,9 @@
 
     if (resetBtn) {
       resetBtn.onclick = function () {
-        if (confirm('Are you sure you want to reset all prototype demo data?\nAll recorded fee settlements, attendance check-ins, and study notes will revert to fresh defaults.')) {
+        if (confirm('Are you sure you want to restore all prototype demo data to defaults?\nAll created student profiles, newly joined tuitions, and mock fee vouchers will reset.')) {
           Store.reset();
-          showToast('Demo data restored to initial state!', 'info', 2000);
+          showToast('Demo data restored to initial factory defaults!', 'info', 2000);
           setTimeout(function () {
             window.location.reload();
           }, 600);
@@ -2077,12 +2559,35 @@
     }
   }
 
-  // ─── 19. APP INITIALIZATION & BOOTSTRAP ───────────────────────────────────
+  // ─── 24. APP INITIALIZATION & BOOTSTRAP ─────────────────────────────────────
   function initApp() {
     initState();
     applyTheme(STATE.theme);
     updateSidebarProfile();
+    renderStudentSelector();
+    renderCenterSelector();
 
+    // Global modal triggers
+    window.VS_openJoinCenterModal = openJoinCenterModal;
+    window.VS_openAddStudentModal = openAddStudentModal;
+    window.VS_switchCenter = function (centerId) {
+      currentCenterId = centerId;
+      renderCenterSelector();
+      handleRouting();
+    };
+    window.VS_setStudent = setStudent;
+
+    var btnAddStudentSidebar = document.getElementById('btnAddStudentSidebar');
+    if (btnAddStudentSidebar) {
+      btnAddStudentSidebar.onclick = openAddStudentModal;
+    }
+
+    var btnJoinCenterSidebar = document.getElementById('btnJoinCenterSidebar');
+    if (btnJoinCenterSidebar) {
+      btnJoinCenterSidebar.onclick = openJoinCenterModal;
+    }
+
+    // Sidebar drawer toggle on mobile
     var hamburger = document.getElementById('hamburger');
     var appSidebar = document.getElementById('appSidebar');
     var sidebarBackdrop = document.getElementById('sidebarBackdrop');
@@ -2110,37 +2615,24 @@
       });
     }
 
-    if (sidebarCloseBtn) {
-      sidebarCloseBtn.addEventListener('click', closeSidebar);
-    }
-
-    if (sidebarBackdrop) {
-      sidebarBackdrop.addEventListener('click', closeSidebar);
-    }
+    if (sidebarCloseBtn) sidebarCloseBtn.addEventListener('click', closeSidebar);
+    if (sidebarBackdrop) sidebarBackdrop.addEventListener('click', closeSidebar);
 
     var sidebarNavItems = document.querySelectorAll('.sidebar-nav-item');
     sidebarNavItems.forEach(function (item) {
       item.addEventListener('click', function () {
-        if (window.innerWidth < 960) {
-          closeSidebar();
-        }
+        if (window.innerWidth < 960) closeSidebar();
       });
     });
 
     var themeToggleBtn = document.getElementById('themeToggle');
-    if (themeToggleBtn) {
-      themeToggleBtn.addEventListener('click', toggleTheme);
-    }
+    if (themeToggleBtn) themeToggleBtn.addEventListener('click', toggleTheme);
 
     var themeToggleMobile = document.getElementById('themeToggleMobile');
-    if (themeToggleMobile) {
-      themeToggleMobile.addEventListener('click', toggleTheme);
-    }
+    if (themeToggleMobile) themeToggleMobile.addEventListener('click', toggleTheme);
 
     var modeToggleBtn = document.getElementById('modeToggle');
-    if (modeToggleBtn) {
-      modeToggleBtn.addEventListener('click', toggleParentMode);
-    }
+    if (modeToggleBtn) modeToggleBtn.addEventListener('click', toggleParentMode);
 
     window.addEventListener('hashchange', handleRouting);
     handleRouting();
