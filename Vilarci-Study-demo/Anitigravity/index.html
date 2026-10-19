@@ -28,7 +28,7 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
     </button>
     <a href="#home" class="mobile-brand" aria-label="Vilarci Study Home">
-      <div class="nav-brand-icon" style="width:32px; height:32px; font-size:12px;">VS</div>
+      <img src="https://officialpic.vilarci.in/Icons/web-icon.png" alt="Vilarci Study Logo" class="nav-brand-img" style="width:32px; height:32px; border-radius:8px; object-fit:contain;">
       <span class="brand-name" style="font-size:16px;">Vilarci Study</span>
     </a>
     <div style="display:flex; align-items:center; gap:6px;">
@@ -46,10 +46,10 @@
     <!-- Sidebar Brand -->
     <div class="sidebar-brand-box">
       <a href="#home" class="nav-brand" aria-label="Vilarci Study Home">
-        <div class="nav-brand-icon" aria-hidden="true">VS</div>
+        <img src="https://officialpic.vilarci.in/Icons/web-icon.png" alt="Vilarci Study Logo" class="nav-brand-img" style="width:38px; height:38px; border-radius:10px; object-fit:contain; box-shadow:0 3px 10px rgba(0,0,0,0.08);">
         <div>
           <span class="brand-name">Vilarci Study</span>
-          <span class="brand-sub">Multi-Coaching Portal &bull; v2.0</span>
+          <span class="brand-sub">Academic Journal &bull; Multi-Coaching</span>
         </div>
       </a>
       <button type="button" class="sidebar-close-btn" id="sidebarCloseBtn" aria-label="Close sidebar">
@@ -57,19 +57,9 @@
       </button>
     </div>
 
-    <!-- Active Student Profile Card -->
-    <div class="sidebar-profile-card">
-      <div class="sidebar-avatar" id="sidebarAvatar">AM</div>
-      <div style="flex:1; overflow:hidden;">
-        <div class="sidebar-student-name" id="sidebarStudentName">Aryan Mehta</div>
-        <div class="sidebar-student-roll" id="sidebarStudentRoll">Roll: SA-101 &bull; Class 10</div>
-      </div>
-      <span class="status-indicator-dot" title="Active student session"></span>
-    </div>
-
-    <!-- 1. Student Profile Switcher (Up to 5 profiles supported) -->
-    <div class="sidebar-switcher-card">
-      <div class="switcher-header">
+    <!-- 1. Active Student Profile Card (Clickable to switch profile popup) -->
+    <div class="sidebar-profile-card" id="sidebarProfileCard" role="button" tabindex="0" title="Click to switch student profile" style="cursor:pointer;">
+      <div class="sidebar-profile-top">
         <span class="switcher-label">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px; height:12px;"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
           ACTIVE STUDENT
@@ -78,10 +68,20 @@
           + Add Profile
         </button>
       </div>
-      <select id="sidebarStudentSelect" class="custom-select-styled" aria-label="Switch Active Student Profile">
-        <!-- Dynamically rendered -->
-      </select>
+      <div class="sidebar-profile-main">
+        <div class="sidebar-avatar" id="sidebarAvatar">AM</div>
+        <div style="flex:1; overflow:hidden;">
+          <div class="sidebar-student-name" id="sidebarStudentName">Aryan Mehta</div>
+          <div class="sidebar-student-roll" id="sidebarStudentRoll">Roll: SA-101 &bull; Class 10</div>
+        </div>
+        <div class="profile-switch-chevron" title="Switch profile">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:14px; height:14px;"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+      </div>
     </div>
+
+    <!-- Hidden native student select for fallback compatibility -->
+    <select id="sidebarStudentSelect" style="display:none;" aria-label="Switch Active Student Profile"></select>
 
     <!-- 2. Teacher & Coaching Center Switcher -->
     <div class="sidebar-switcher-card">

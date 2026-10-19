@@ -305,6 +305,64 @@
   }
 
   // ─── 7. MULTI-STUDENT PROFILE MANAGEMENT (Up to 5 profiles) ────────────────
+  function openSwitchProfileModal() {
+    var students = STATE.students || DATA.students || [];
+    var profilesHtml = students.map(function (s) {
+      var isCurrent = (s.id === currentStudentId);
+      var enrolled = getStudentEnrolledCenters(s.id);
+      return '<div class="student-profile-select-item' + (isCurrent ? ' selected' : '') + '" data-student-id="' + s.id + '" style="display:flex; align-items:center; gap:14px; padding:12px 14px; border-radius:var(--radius-md); border:1.5px solid ' + (isCurrent ? 'var(--primary)' : 'var(--border)') + '; background:' + (isCurrent ? 'var(--primary-subtle)' : 'var(--surface)') + '; cursor:pointer; transition:all 0.18s ease;">' +
+        '<div class="sidebar-avatar" style="width:40px; height:40px; font-size:14px; background:' + (s.avatar_bg || 'linear-gradient(135deg, var(--primary), var(--accent))') + ';">' + (s.photo_initials || 'ST') + '</div>' +
+        '<div style="flex:1; overflow:hidden;">' +
+          '<div style="display:flex; align-items:center; gap:8px;">' +
+            '<strong style="font-size:14px; color:var(--text-main);">' + s.name + '</strong>' +
+            (isCurrent ? '<span class="badge badge-primary" style="font-size:10px;">Active</span>' : '') +
+          '</div>' +
+          '<div class="text-xs text-muted" style="margin-top:2px;">Roll: ' + s.roll + ' &bull; ' + s.class + ' (' + (s.board || 'CBSE') + ') &bull; ' + enrolled.length + ' Enrolled Centers</div>' +
+        '</div>' +
+        (isCurrent ? '<svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2.5" style="width:20px; height:20px;"><polyline points="20 6 9 17 4 12"/></svg>' : '<span class="text-xs text-secondary" style="font-weight:600;">Switch &rarr;</span>') +
+      '</div>';
+    }).join('');
+
+    var modalHtml =
+      '<div style="display:flex; flex-direction:column; gap:12px;">' +
+        '<p class="text-xs text-secondary">' +
+          'Select an active student profile to inspect classes, test scores, attendance, and fee invoices.' +
+        '</p>' +
+        '<div style="display:flex; flex-direction:column; gap:8px; margin:4px 0 10px;">' +
+          profilesHtml +
+        '</div>' +
+        '<div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--border); padding-top:14px;">' +
+          '<span class="text-xs text-muted">' + students.length + ' of 5 profiles used</span>' +
+          '<button type="button" class="btn btn-secondary btn-sm" id="btnAddNewFromSwitchModal">' +
+            '+ Add New Student Profile' +
+          '</button>' +
+        '</div>' +
+      '</div>';
+
+    var closeModal = openModal({
+      title: 'Switch Student Profile',
+      body: modalHtml,
+      onReady: function (overlay) {
+        var items = overlay.querySelectorAll('.student-profile-select-item');
+        items.forEach(function (item) {
+          item.onclick = function () {
+            var sId = this.getAttribute('data-student-id');
+            closeModal();
+            setStudent(sId);
+          };
+        });
+
+        var addBtn = overlay.querySelector('#btnAddNewFromSwitchModal');
+        if (addBtn) {
+          addBtn.onclick = function () {
+            closeModal();
+            openAddStudentModal();
+          };
+        }
+      }
+    });
+  }
+
   function renderStudentSelector() {
     var sidebarSelect = document.getElementById('sidebarStudentSelect');
     var childSelect = document.getElementById('childSelect');
@@ -2691,6 +2749,7 @@
     // Global modal triggers
     window.VS_openJoinCenterModal = openJoinCenterModal;
     window.VS_openAddStudentModal = openAddStudentModal;
+    window.VS_openSwitchProfileModal = openSwitchProfileModal;
     window.VS_switchCenter = function (centerId) {
       currentCenterId = centerId;
       renderCenterSelector();
@@ -2698,9 +2757,27 @@
     };
     window.VS_setStudent = setStudent;
 
+    var sidebarProfileCard = document.getElementById('sidebarProfileCard');
+    if (sidebarProfileCard) {
+      sidebarProfileCard.onclick = function (e) {
+        // If clicked directly on + Add Profile button, do not trigger switcher
+        if (e.target && e.target.closest('#btnAddStudentSidebar')) return;
+        openSwitchProfileModal();
+      };
+      sidebarProfileCard.onkeydown = function (e) {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          openSwitchProfileModal();
+        }
+      };
+    }
+
     var btnAddStudentSidebar = document.getElementById('btnAddStudentSidebar');
     if (btnAddStudentSidebar) {
-      btnAddStudentSidebar.onclick = openAddStudentModal;
+      btnAddStudentSidebar.onclick = function (e) {
+        if (e && e.stopPropagation) e.stopPropagation();
+        openAddStudentModal();
+      };
     }
 
     var btnJoinCenterSidebar = document.getElementById('btnJoinCenterSidebar');

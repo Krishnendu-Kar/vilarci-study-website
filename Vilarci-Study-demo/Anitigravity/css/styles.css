@@ -61,23 +61,24 @@
   --color-english-border: #FED7AA;
   --color-english-text:   #C2410C;
 
-  /* Surfaces & Neutrals (Light Mode - Warm Velvet/Parchment Undertone) */
-  --bg-app:         #FAF6F6;
-  --surface:        #FFFFFF;
-  --surface-muted:  #F5EBEB;
-  --surface-alt:    #EBE0E0;
-  --border:         #E8DDDD;
+  /* Surfaces & Neutrals (Light Mode - Clean #fefefe Canvas with Organic Warmth) */
+  --bg-app:         #fefefe;
+  --surface:        #ffffff;
+  --surface-muted:  #f6f7f4;
+  --surface-alt:    #eef0eb;
+  --border:         #e4e8e2;
   --border-focus:   #800020;
 
   /* Typography */
-  --text-main:      #1F0D12;
-  --text-secondary: #574147;
-  --text-muted:     #8E777D;
+  --text-main:      #1a1f1c;
+  --text-secondary: #4d5752;
+  --text-muted:     #78857e;
   --text-white:     #FFFFFF;
 
-  /* Typography System */
-  --font-sans:      'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-mono:      'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  /* Typography System (Editorial serif + soft rounded UI sans like Replit) */
+  --font-serif:     Georgia, Cambria, "Times New Roman", Times, serif;
+  --font-sans:      ui-rounded, "Avenir Next", Avenir, 'Plus Jakarta Sans', "Segoe UI", -apple-system, sans-serif;
+  --font-mono:      'JetBrains Mono', "SFMono-Regular", Consolas, monospace;
 
   /* Elevation Shadows */
   --shadow-xs:      0 1px 2px 0 rgba(31, 13, 18, 0.05);
@@ -332,13 +333,32 @@ button, input, select, textarea {
   display: none;
 }
 
-/* Active Student Profile Card in Sidebar */
+/* Active Student Profile Card in Sidebar (Combined 2-in-1 Box) */
 .sidebar-profile-card {
-  margin: 14px 14px 10px;
+  margin: 12px 14px 8px;
   padding: 10px 12px;
   background: var(--surface-muted);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: all var(--transition-fast);
+}
+
+.sidebar-profile-card:hover {
+  background: var(--surface);
+  border-color: rgba(128, 0, 32, 0.3);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04);
+}
+
+.sidebar-profile-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sidebar-profile-main {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -348,7 +368,7 @@ button, input, select, textarea {
   width: 36px;
   height: 36px;
   border-radius: var(--radius-pill);
-  background: var(--primary);
+  background: linear-gradient(135deg, var(--primary), var(--accent));
   color: #FFFFFF;
   font-weight: 800;
   font-size: 13px;
@@ -356,6 +376,7 @@ button, input, select, textarea {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(128, 0, 32, 0.2);
 }
 
 .sidebar-student-name {
@@ -372,13 +393,28 @@ button, input, select, textarea {
   color: var(--text-muted);
 }
 
+.profile-switch-chevron {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  border-radius: var(--radius-xs);
+  transition: all var(--transition-fast);
+}
+
+.sidebar-profile-card:hover .profile-switch-chevron {
+  color: var(--primary);
+  transform: translateY(1px);
+}
+
 .status-indicator-dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
   background: var(--accent);
   box-shadow: 0 0 0 2px var(--surface);
-  flex-shrink: 0;
 }
 
 /* Sidebar Scrollable Menu */
@@ -595,15 +631,16 @@ button, input, select, textarea {
 }
 
 .page-header h1 {
-  font-size: 26px;
-  font-weight: 800;
+  font-family: var(--font-serif);
+  font-size: 28px;
+  font-weight: 400;
   color: var(--text-main);
-  letter-spacing: -0.6px;
+  letter-spacing: -0.7px;
   line-height: 1.25;
 }
 
 @media (min-width: 768px) {
-  .page-header h1 { font-size: 32px; }
+  .page-header h1 { font-size: 34px; letter-spacing: -1px; }
 }
 
 .page-header p {
@@ -613,21 +650,21 @@ button, input, select, textarea {
   line-height: 1.5;
 }
 
-/* ===== CARDS ARCHITECTURE ===== */
+/* ===== CARDS ARCHITECTURE (Editorial Replit Card Style) ===== */
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
 }
 
 .card:hover {
-  box-shadow: var(--shadow-md);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.05);
 }
 
 .card-header {
-  padding: 16px 22px;
+  padding: 18px 22px;
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
@@ -636,8 +673,9 @@ button, input, select, textarea {
 }
 
 .card-title {
-  font-size: 16px;
-  font-weight: 700;
+  font-family: var(--font-serif);
+  font-size: 17px;
+  font-weight: 400;
   color: var(--text-main);
   letter-spacing: -0.2px;
 }
@@ -691,11 +729,12 @@ button, input, select, textarea {
 .stat-card-icon.error   { background: var(--error-bg);       color: var(--error); }
 
 .stat-card-value {
-  font-size: 26px;
-  font-weight: 800;
+  font-family: var(--font-serif);
+  font-size: 30px;
+  font-weight: 400;
   color: var(--text-main);
   line-height: 1.15;
-  letter-spacing: -0.5px;
+  letter-spacing: -0.8px;
 }
 
 .stat-card-label {
@@ -2739,55 +2778,74 @@ textarea:focus {
   box-shadow: 0 0 0 2px var(--primary-glow);
 }
 
-/* Teacher / Coaching Hero Card (Academic Pages) */
+/* Teacher / Coaching Hero Card (Academic Pages - Editorial Replit Style) */
 .teacher-hero-card {
-  background: var(--surface);
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, rgba(128, 0, 32, 0.04), rgba(217, 119, 6, 0.05)), var(--surface);
   border: 1px solid var(--border);
   border-left: 4px solid var(--primary);
-  border-radius: var(--radius-md);
-  padding: 16px 20px;
-  margin-bottom: 22px;
+  border-radius: var(--radius-lg);
+  padding: 18px 24px;
+  margin-bottom: 24px;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  box-shadow: var(--shadow-xs);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
   transition: all var(--transition-base);
+}
+
+.teacher-hero-card::after {
+  content: "";
+  position: absolute;
+  top: -40px;
+  right: -40px;
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  border: 1px solid rgba(128, 0, 32, 0.08);
+  box-shadow: 0 0 0 24px rgba(128, 0, 32, 0.03), 0 0 0 48px rgba(128, 0, 32, 0.015);
+  pointer-events: none;
 }
 
 .teacher-hero-info {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 16px;
+  position: relative;
+  z-index: 1;
 }
 
 .teacher-logo-badge {
-  width: 44px;
-  height: 44px;
-  border-radius: var(--radius-sm);
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md);
   background: linear-gradient(135deg, var(--primary), #4C0519);
   color: #FFFFFF;
   font-weight: 800;
-  font-size: 16px;
+  font-size: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  box-shadow: 0 2px 6px var(--primary-glow);
+  box-shadow: 0 4px 12px var(--primary-glow);
 }
 
 .teacher-hero-title {
-  font-size: 16px;
-  font-weight: 800;
+  font-family: var(--font-serif);
+  font-size: 19px;
+  font-weight: 400;
   color: var(--text-main);
+  letter-spacing: -0.3px;
   line-height: 1.25;
 }
 
 .teacher-hero-sub {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-secondary);
-  margin-top: 3px;
+  margin-top: 4px;
   display: flex;
   flex-wrap: wrap;
   align-items: center;

@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="https://officialpic.vilarci.in/Icons/web-icon.png">
+    <link rel="shortcut icon" type="image/png" href="https://officialpic.vilarci.in/Icons/web-icon.png">
+    <link rel="apple-touch-icon" href="https://officialpic.vilarci.in/Icons/web-icon.png">
+    <title>Vilarci Study</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --paper: #eef1f7;
+            --ink: #1b2250;
+            --ink-soft: #4c5380;
+            --marigold: #f2a900;
+            --sky: #9db4ff;
+            --card: #ffffff;
+            --line: #d3d9ea;
+            color-scheme: light;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --paper: #141838;
+                --ink: #eef1ff;
+                --ink-soft: #aab2e0;
+                --card: #1d2352;
+                --line: #333b7a;
+                color-scheme: dark;
+            }
+        }
+        * { box-sizing: border-box; margin: 0; }
+        html, body { min-height: 100%; }
+        body {
+            font-family: "Bricolage Grotesque", system-ui, -apple-system, "Segoe UI", sans-serif;
+            background: var(--paper);
+            color: var(--ink);
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+        }
+        main {
+            max-width: 1040px;
+            margin: 0 auto;
+            padding: clamp(32px, 7vw, 88px) clamp(20px, 4vw, 40px);
+        }
+        header { max-width: 36rem; margin-bottom: clamp(32px, 6vw, 64px); }
+        .brand { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; font-weight: 600; }
+        .brand img { width: 36px; height: 36px; border-radius: 10px; }
+        h1 {
+            font-size: clamp(2.6rem, 8vw, 5rem);
+            font-weight: 800;
+            line-height: 0.98;
+            letter-spacing: -0.03em;
+        }
+        header p { margin-top: 20px; color: var(--ink-soft); font-size: 1.1rem; max-width: 30rem; }
+
+        .choices { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        @media (max-width: 720px) { .choices { grid-template-columns: 1fr; } }
+
+        .choice {
+            display: flex; flex-direction: column;
+            background: var(--card);
+            border: 2px solid var(--line);
+            border-radius: 28px;
+            overflow: hidden;
+            color: inherit; text-decoration: none;
+            transition: border-color .2s, transform .2s;
+        }
+        .choice:hover { border-color: var(--ink); transform: translateY(-4px); }
+        .choice:focus-visible { outline: 3px solid var(--marigold); outline-offset: 4px; }
+
+        .preview {
+            height: 240px; position: relative; overflow: hidden;
+            background: var(--line);
+            border-bottom: 2px solid var(--line);
+        }
+        .preview iframe {
+            position: absolute; top: 0; left: 0;
+            width: 400%; height: 400%;
+            border: 0; background: #fff;
+            transform: scale(0.25); transform-origin: top left;
+            pointer-events: none;
+        }
+
+        .body { padding: 24px 26px 28px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+        .body h2 { font-size: 1.6rem; font-weight: 800; letter-spacing: -0.02em; }
+        .body p { color: var(--ink-soft); }
+        .open {
+            margin-top: 14px; align-self: flex-start;
+            padding: 10px 20px; border-radius: 999px;
+            background: var(--ink); color: var(--paper);
+            font-weight: 600; font-size: .95rem;
+            transition: background .2s, color .2s;
+        }
+        .choice:hover .open { background: var(--marigold); color: #1b2250; }
+    </style>
+</head>
+<body>
+    <main>
+        <header>
+            <div class="brand">
+                <img src="https://officialpic.vilarci.in/Icons/web-icon.png" alt="">
+                <span>Vilarci</span>
+            </div>
+            <h1>Vilarci Study</h1>
+            <p>Two versions of the study experience are ready. Pick one to open it.</p>
+        </header>
+
+        <div class="choices">
+            <a class="choice" href="./Anitigravity/index.html">
+                <div class="preview" aria-hidden="true">
+                    <iframe src="https://krishnendu-kar.github.io/vilarci-study-website/Vilarci-Study-demo/Anitigravity" title="" tabindex="-1" loading="lazy"></iframe>
+                </div>
+                <div class="body">
+                    <h2>Antigravity Style</h2>
+                    <p>Light, floating layout with soft motion.</p>
+                    <span class="open">Open this version</span>
+                </div>
+            </a>
+
+            <a class="choice" href="./Replit/index.html">
+                <div class="preview" aria-hidden="true">
+                    <iframe src="https://vilarci-study-demo-portal--locaalrapid.replit.app/" title="" tabindex="-1" loading="lazy"></iframe>
+                </div>
+                <div class="body">
+                    <h2>Replit Version</h2>
+                    <p>Structured, panel-based layout with a clear grid.</p>
+                    <span class="open">Open this version</span>
+                </div>
+            </a>
+        </div>
+    </main>
+</body>
+</html>
