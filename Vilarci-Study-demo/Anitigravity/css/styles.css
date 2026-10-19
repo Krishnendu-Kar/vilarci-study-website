@@ -1452,44 +1452,89 @@ textarea:focus {
 .tt-english   { background: #FCE7F3;               color: #BE185D; }
 .tt-empty     { color: var(--text-muted); font-size: 13px; }
 
-.syllabus-subject-section { margin-bottom: 24px; }
-.syllabus-topics-list { display: grid; gap: 8px; }
+/* Modern Editorial Syllabus & Curriculum Cards */
+.syllabus-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
 
-.syllabus-topic-item {
+.syllabus-topic-card {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 12px 16px;
+  gap: 16px;
+  padding: 16px 20px;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
   transition: all var(--transition-fast);
+  margin-bottom: 12px;
 }
 
-.syllabus-topic-item:hover { border-color: var(--primary-light); }
-.syllabus-topic-item.covered  { border-left: 4px solid var(--accent); }
-.syllabus-topic-item.partial  { border-left: 4px solid var(--warning); }
-.syllabus-topic-item.skipped  { border-left: 4px solid var(--error); }
-.syllabus-topic-item.upcoming { border-left: 4px solid var(--border); }
+.syllabus-topic-card:hover {
+  border-color: rgba(128, 0, 32, 0.3);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.04);
+  transform: translateY(-1px);
+}
 
-.revise-btn {
-  padding: 5px 12px;
+.syllabus-topic-card.status-covered {
+  border-left: 4px solid var(--success);
+}
+
+.syllabus-topic-card.status-partial {
+  border-left: 4px solid var(--warning);
+}
+
+.syllabus-topic-card.status-skipped {
+  border-left: 4px solid var(--error);
+}
+
+.syllabus-topic-card.status-upcoming {
+  border-left: 4px solid var(--border);
+}
+
+.syllabus-check-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
   border-radius: var(--radius-pill);
-  border: 1px solid var(--border);
   background: var(--surface-muted);
-  font-size: 11px;
+  border: 1px solid var(--border);
+  font-size: 12px;
   font-weight: 700;
   color: var(--text-secondary);
   cursor: pointer;
+  white-space: nowrap;
   transition: all var(--transition-fast);
+  flex-shrink: 0;
 }
 
-.revise-btn:hover { border-color: var(--accent); color: var(--accent); }
-.revise-btn.revised {
-  background: var(--accent-subtle);
-  border-color: var(--accent);
-  color: var(--accent-hover);
+.syllabus-check-label:hover {
+  background: var(--primary-subtle);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.syllabus-check-label.revised {
+  background: #fae8eb;
+  border-color: rgba(128, 0, 32, 0.35);
+  color: #800020;
+}
+
+[data-theme="dark"] .syllabus-check-label.revised {
+  background: #3b1924;
+  border-color: #f7aab7;
+  color: #f7aab7;
+}
+
+.syllabus-check-label input[type="checkbox"] {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--primary);
+  cursor: pointer;
 }
 
 /* ===== FOCUS STUDY & VIDEO PLAYER ===== */
@@ -1612,7 +1657,7 @@ textarea:focus {
 }
 .notes-saved-indicator.saved { color: var(--accent); }
 
-/* ===== SIMULATIONS & VIDEO CARDS (Editorial Replit Labs Style) ===== */
+/* ===== SIMULATIONS & VIDEO CARDS (Editorial Replit Labs Style - Maroon Edition) ===== */
 .labs-toolbar {
   display: flex;
   align-items: center;
@@ -1647,13 +1692,13 @@ textarea:focus {
 
 .sim-card:hover {
   transform: translateY(-3px);
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.06);
-  border-color: rgba(49, 93, 75, 0.35);
+  box-shadow: 0 10px 28px rgba(128, 0, 32, 0.09);
+  border-color: rgba(128, 0, 32, 0.4);
 }
 
 .sim-card-banner {
   height: 140px;
-  background: #d4e3d9;
+  background: #f5e4e8;
   position: relative;
   overflow: hidden;
   display: flex;
@@ -1662,7 +1707,7 @@ textarea:focus {
 }
 
 [data-theme="dark"] .sim-card-banner {
-  background: #23342c;
+  background: #30141d;
 }
 
 .sim-card-banner::before,
@@ -1676,19 +1721,19 @@ textarea:focus {
 .sim-card-banner::before {
   width: 90px;
   height: 90px;
-  border: 1px solid rgba(49, 93, 75, 0.22);
+  border: 1px solid rgba(128, 0, 32, 0.22);
 }
 
 .sim-card-banner::after {
   width: 130px;
   height: 130px;
-  border: 1px solid rgba(49, 93, 75, 0.12);
+  border: 1px solid rgba(128, 0, 32, 0.12);
 }
 
 .sim-banner-flask {
   width: 44px;
   height: 44px;
-  color: #2b5544;
+  color: #800020;
   position: relative;
   z-index: 1;
   display: flex;
@@ -1697,7 +1742,7 @@ textarea:focus {
 }
 
 [data-theme="dark"] .sim-banner-flask {
-  color: #a4c9ae;
+  color: #f7aab7;
 }
 
 .sim-card-content {
@@ -1714,15 +1759,15 @@ textarea:focus {
   border-radius: var(--radius-pill);
   font-size: 11px;
   font-weight: 700;
-  background: #eef3ef;
-  color: #315d4b;
+  background: #fae8eb;
+  color: #800020;
   margin-bottom: 8px;
   letter-spacing: 0.2px;
 }
 
 [data-theme="dark"] .sim-tag-pill {
-  background: #293a32;
-  color: #a4c9ae;
+  background: #3b1924;
+  color: #f7aab7;
 }
 
 .sim-title {
@@ -1749,8 +1794,8 @@ textarea:focus {
   gap: 6px;
   padding: 6px 14px;
   border-radius: var(--radius-pill);
-  background: #eef4f0;
-  color: #2b5544;
+  background: #fae8eb;
+  color: #800020;
   font-size: 12.5px;
   font-weight: 700;
   border: none;
@@ -1760,12 +1805,12 @@ textarea:focus {
 }
 
 [data-theme="dark"] .sim-launch-link {
-  background: #27382f;
-  color: #a4c9ae;
+  background: #3b1924;
+  color: #f7aab7;
 }
 
 .sim-card:hover .sim-launch-link {
-  background: #315d4b;
+  background: #800020;
   color: #ffffff;
 }
 

@@ -1669,34 +1669,38 @@
         sylContainer.innerHTML = topics.map(function (item) {
           var centerObj = getCenterById(item.center_id);
           var statusBadge = '';
+          var statusClass = 'status-' + (item.status || 'upcoming');
+
           if (item.status === 'covered') {
-            statusBadge = '<span class="badge badge-success">Covered</span>';
+            statusBadge = '<span class="badge badge-success text-xs">✓ Covered</span>';
           } else if (item.status === 'partial') {
-            statusBadge = '<span class="badge badge-warning">Partial</span>';
+            statusBadge = '<span class="badge badge-warning text-xs">⏳ In Progress</span>';
           } else if (item.status === 'skipped') {
-            statusBadge = '<span class="badge badge-neutral">Skipped</span>';
+            statusBadge = '<span class="badge badge-neutral text-xs">⏭️ Skipped</span>';
           } else {
-            statusBadge = '<span class="badge badge-neutral">Upcoming</span>';
+            statusBadge = '<span class="badge badge-neutral text-xs">Upcoming</span>';
           }
 
+          var subColor = getSubjectColor(item.subject);
+
           return (
-            '<div class="syllabus-topic-card">' +
-              '<div style="flex:1;">' +
-                '<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:4px;">' +
-                  '<span class="badge badge-neutral text-xs">' + item.subject + '</span>' +
-                  '<span class="center-tag" style="border-color:' + centerObj.color + '; color:' + centerObj.color + '; font-size:10px;">🏛️ ' + centerObj.name + '</span>' +
-                  '<span class="text-xs text-muted">Chapter: ' + item.chapter + '</span>' +
+            '<div class="syllabus-topic-card ' + statusClass + '">' +
+              '<div style="flex:1; overflow:hidden;">' +
+                '<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:8px;">' +
+                  '<span class="badge badge-neutral" style="font-size:11px; font-weight:700; color:' + subColor + '; background:var(--surface-muted); border:1px solid var(--border);">' + item.subject + '</span>' +
+                  '<span class="center-tag" style="border-color:' + centerObj.color + '; color:' + centerObj.color + '; font-size:11px;">🏛️ ' + centerObj.name + '</span>' +
+                  '<span class="text-xs text-muted" style="font-weight:500;">Chapter: <strong>' + item.chapter + '</strong></span>' +
                   statusBadge +
                 '</div>' +
-                '<h4 class="text-sm fw-700" style="color:var(--text-main); margin-bottom:4px;">' + item.topic + '</h4>' +
-                '<div class="text-xs text-muted">' +
-                  'Planned: ' + item.planned_date +
-                  (item.covered_date ? ' &bull; Taught: ' + item.covered_date : '') +
+                '<h4 style="font-family:var(--font-sans); font-size:16px; font-weight:800; color:var(--text-main); margin-bottom:6px; letter-spacing:-0.2px;">' + item.topic + '</h4>' +
+                '<div class="text-xs text-secondary" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">' +
+                  '<span>📅 Planned: <strong>' + item.planned_date + '</strong></span>' +
+                  (item.covered_date ? '<span>&bull; 🎓 Taught: <strong style="color:var(--success);">' + item.covered_date + '</strong></span>' : '') +
                 '</div>' +
               '</div>' +
-              '<label class="syllabus-check-label" style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer;">' +
-                '<input type="checkbox" class="syl-checkbox" data-syl-id="' + item.id + '" ' + (item.revised_by_student ? 'checked' : '') + ' style="accent-color:var(--primary);">' +
-                '<span>I revised this topic</span>' +
+              '<label class="syllabus-check-label' + (item.revised_by_student ? ' revised' : '') + '" title="Click to record revision and earn 15 points">' +
+                '<input type="checkbox" class="syl-checkbox" data-syl-id="' + item.id + '" ' + (item.revised_by_student ? 'checked' : '') + '>' +
+                '<span>' + (item.revised_by_student ? '✓ Revised (+15 pts)' : 'I revised this topic') + '</span>' +
               '</label>' +
             '</div>'
           );
