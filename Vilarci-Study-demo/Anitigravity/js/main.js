@@ -2363,10 +2363,10 @@
 
     var ptsDisplay = document.getElementById('pointsTotalDisplay');
     var ptsBigTotal = document.getElementById('pointsBigTotal');
-    var ptsBigStreak = document.getElementById('pointsBigStreak');
-    var ptsTeacherGiven = document.getElementById('pointsTeacherGiven');
+    var ptsRankPill = document.getElementById('pointsRankPill');
+    var ptsStreakPill = document.getElementById('pointsStreakPill');
+    var ptsTeacherPill = document.getElementById('pointsTeacherPill');
     var streakDisplay = document.getElementById('pointsStreakDisplay');
-    var rankDisplay = document.getElementById('pointsRankDisplay');
 
     var allHist = STATE.points_history || DATA.points_history || [];
     var studentHist = allHist.filter(function (h) {
@@ -2381,14 +2381,38 @@
     var teacherPoints = studentHist.filter(function (h) { return h.award_type === 'teacher'; })
       .reduce(function (sum, h) { return sum + (h.points || 0); }, 0);
 
-    if (ptsDisplay) ptsDisplay.textContent = (currentCenterId === 'all' ? (student.points || STATE.points) : totalFilteredPoints).toLocaleString();
-    if (ptsBigTotal) ptsBigTotal.textContent = (currentCenterId === 'all' ? (student.points || STATE.points) : totalFilteredPoints).toLocaleString();
-    if (ptsBigStreak) ptsBigStreak.textContent = (student.streak || STATE.streak) + ' Days 🔥';
-    if (ptsTeacherGiven) ptsTeacherGiven.textContent = teacherPoints + ' pts';
-    if (streakDisplay) streakDisplay.textContent = (student.streak || STATE.streak) + ' Days';
-    if (rankDisplay) rankDisplay.textContent = (currentCenterId === 'all' ? '#6' : '#2 in ' + (getActiveCenter() ? getActiveCenter().name.split(' ')[0] : 'Batch'));
+    var displayPts = currentCenterId === 'all' ? (student.points || STATE.points) : totalFilteredPoints;
 
-    // Points Filter (All, Teacher Awards, System Milestones)
+    if (ptsDisplay) ptsDisplay.textContent = displayPts.toLocaleString();
+    if (ptsBigTotal) ptsBigTotal.textContent = displayPts.toLocaleString();
+    if (ptsStreakPill) ptsStreakPill.textContent = '🔥 ' + (student.streak || STATE.streak) + '-day study streak';
+    if (ptsTeacherPill) ptsTeacherPill.textContent = '🏅 ' + teacherPoints + ' faculty honors';
+    if (ptsRankPill) ptsRankPill.textContent = currentCenterId === 'all' ? 'Rank #6 in batch' : 'Rank #2 in ' + (getActiveCenter() ? getActiveCenter().name.split(' ')[0] : 'Batch');
+    if (streakDisplay) streakDisplay.textContent = (student.streak || STATE.streak) + ' Days';
+
+    // 1. Badges Grid Rendering
+    var badgesContainer = document.getElementById('badgesContainer');
+    var badgesCountBadge = document.getElementById('badgesCountBadge');
+    if (badgesContainer) {
+      var badges = STATE.badges || DATA.badges || [];
+      var unlockedCount = badges.filter(function (b) { return b.earned; }).length;
+      if (badgesCountBadge) badgesCountBadge.textContent = unlockedCount + ' of ' + badges.length + ' Unlocked';
+
+      badgesContainer.innerHTML = badges.map(function (b) {
+        return (
+          '<div class="badge-item-editorial' + (b.earned ? '' : ' locked') + '">' +
+            '<div class="badge-icon-box">' + b.icon_emoji + '</div>' +
+            '<div class="badge-info-box">' +
+              '<div class="badge-title-txt">' + b.name + '</div>' +
+              '<div class="badge-desc-txt">' + b.description + '</div>' +
+              '<span class="badge-status-tag">' + (b.earned ? '✓ Unlocked' : '🔒 Locked') + '</span>' +
+            '</div>' +
+          '</div>'
+        );
+      }).join('');
+    }
+
+    // 2. Points History Audit Trail
     var pointFilterChips = document.querySelectorAll('#pointsTypeFilter .chip');
     var activePointType = 'all';
 
@@ -2402,28 +2426,26 @@
       });
 
       if (displayedHist.length === 0) {
-        histContainer.innerHTML = '<div class="text-sm text-muted p-16 text-center">No points events found for this filter selection.</div>';
+        histContainer.innerHTML = '<div class="text-sm text-muted p-24 text-center">No recorded points events for this filter.</div>';
         return;
       }
 
-      histContainer.innerHTML = displayedHist.slice(0, 10).map(function (h) {
+      histContainer.innerHTML = displayedHist.slice(0, 8).map(function (h) {
         var isTeacher = h.award_type === 'teacher';
-        var awardBadge = isTeacher
-          ? '<span class="badge badge-accent text-xs">🏅 Teacher Honor</span>'
-          : '<span class="badge badge-neutral text-xs">⚙️ System Milestone</span>';
+        var iconEmoji = isTeacher ? '🏅' : (h.action === 'attendance' ? '📋' : (h.action === 'focus_session' ? '⏱️' : '✨'));
 
         return (
-          '<div class="points-history-item" style="display:flex; align-items:center; gap:12px; padding:12px 14px; border-bottom:1px solid var(--border);">' +
-            '<div style="flex:1;">' +
-              '<div style="display:flex; align-items:center; gap:8px; margin-bottom:3px; flex-wrap:wrap;">' +
-                '<span class="text-sm fw-700">' + h.description + '</span>' +
-                awardBadge +
-              '</div>' +
-              '<div class="text-xs text-muted">' +
-                h.date + (h.center_name ? ' &bull; 🏛️ ' + h.center_name : '') + (h.awarded_by ? ' &bull; Awarded by: <strong>' + h.awarded_by + '</strong>' : '') +
+          '<div class="ph-row">' +
+            '<div class="ph-left">' +
+              '<div class="ph-icon-circle' + (isTeacher ? '' : ' system') + '">' + iconEmoji + '</div>' +
+              '<div style="flex:1; overflow:hidden;">' +
+                '<div class="ph-title-text">' + h.description + '</div>' +
+                '<div class="ph-meta-text">' +
+                  h.date + (h.center_name ? ' &bull; 🏛️ ' + h.center_name : '') + (h.awarded_by ? ' &bull; By: <strong>' + h.awarded_by + '</strong>' : '') +
+                '</div>' +
               '</div>' +
             '</div>' +
-            '<span class="badge badge-accent" style="font-size:12px; font-weight:800;">+' + h.points + ' pts</span>' +
+            '<span class="ph-pts-badge">+' + h.points + '</span>' +
           '</div>'
         );
       }).join('');
@@ -2440,7 +2462,7 @@
 
     renderHistoryList();
 
-    // Leaderboard
+    // 3. Learning Circle Batch Leaderboard
     var lbContainer = document.getElementById('leaderboardList');
     var showRankToggle = document.getElementById('toggleShowRank');
     if (lbContainer) {
@@ -2456,13 +2478,22 @@
         }
       }
 
-      lbContainer.innerHTML = rows.map(function (row) {
+      lbContainer.innerHTML = rows.map(function (row, idx) {
+        var initials = (row.student_name || 'ST').split(' ').map(function (w) { return w[0]; }).join('').substring(0, 2).toUpperCase();
+        var posStr = String(idx + 1).padStart(2, '0');
+
         return (
-          '<div class="leaderboard-row ' + (row.is_self ? 'self-highlight' : '') + '">' +
-            '<span class="lb-rank">' + row.badge + ' #' + row.rank + '</span>' +
-            '<span class="lb-name">' + row.student_name + (row.is_self ? ' <strong>(You)</strong>' : '') + '</span>' +
-            '<span class="text-xs text-muted" style="margin-left:auto; margin-right:12px;">' + (row.center || 'Stellar Academy') + '</span>' +
-            '<span class="lb-pts">' + row.points.toLocaleString() + ' pts</span>' +
+          '<div class="lb-row' + (row.is_self ? ' self' : '') + '">' +
+            '<div class="lb-user-info">' +
+              '<span class="lb-pos">' + posStr + '</span>' +
+              '<span class="lb-avatar">' + initials + '</span>' +
+              '<div style="overflow:hidden; text-overflow:ellipsis;">' +
+                '<span class="lb-name-text">' + row.student_name + '</span>' +
+                (row.is_self ? ' <span class="badge badge-primary text-xs" style="margin-left:4px;">You</span>' : '') +
+                '<span class="lb-center-pill">' + (row.center || 'Stellar Academy') + '</span>' +
+              '</div>' +
+            '</div>' +
+            '<span class="lb-points-val">' + row.points.toLocaleString() + ' pts</span>' +
           '</div>'
         );
       }).join('');
@@ -2470,24 +2501,6 @@
       if (showRankToggle) {
         showRankToggle.onchange = function () { renderPointsView(); };
       }
-    }
-
-    // Badges Grid
-    var badgesContainer = document.getElementById('badgesContainer');
-    if (badgesContainer) {
-      var badges = STATE.badges || DATA.badges || [];
-      badgesContainer.innerHTML = badges.map(function (b) {
-        return (
-          '<div class="badge-card ' + (b.earned ? 'earned' : 'locked') + '">' +
-            '<div class="badge-icon-emoji">' + b.icon_emoji + '</div>' +
-            '<h4 class="text-sm fw-700">' + b.name + '</h4>' +
-            '<p class="text-xs text-muted">' + b.description + '</p>' +
-            '<span class="badge ' + (b.earned ? 'badge-accent' : 'badge-neutral') + ' text-xs" style="margin-top:8px;">' +
-              (b.earned ? 'Unlocked on ' + b.earned_date : '🔒 Locked') +
-            '</span>' +
-          '</div>'
-        );
-      }).join('');
     }
   }
 
