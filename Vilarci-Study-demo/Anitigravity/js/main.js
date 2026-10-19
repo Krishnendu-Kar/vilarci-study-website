@@ -1949,34 +1949,43 @@
 
     var allSims = DATA.simulations || [];
     var activeFilter = 'all';
+    var activeGrade = 'all';
+    var gradeSelect = document.getElementById('labsGradeFilter');
 
-    var renderGrid = function (filter) {
+    var flaskIconSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:28px; height:28px;"><path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a1 1 0 0 0 .9 1.45h12.76a1 1 0 0 0 .9-1.45l-5.069-10.127A2 2 0 0 1 14 9.527V2"/><path d="M8.5 2h7"/><path d="M7 16h10"/></svg>';
+
+    var renderGrid = function () {
       if (!grid) return;
       var filtered = allSims.filter(function (s) {
-        return filter === 'all' ? true : s.subject === filter;
+        var matchSub = activeFilter === 'all' ? true : s.subject.toLowerCase() === activeFilter.toLowerCase();
+        var matchGrade = activeGrade === 'all' ? true : s.class === activeGrade;
+        return matchSub && matchGrade;
       });
+
+      if (filtered.length === 0) {
+        grid.innerHTML = '<div class="card text-center p-24 text-muted" style="grid-column:1/-1;">No simulations found for the selected subject and class grade.</div>';
+        return;
+      }
 
       grid.innerHTML = filtered.map(function (sim) {
         return (
-          '<div class="card sim-card" data-sim-id="' + sim.id + '">' +
-            '<div class="sim-card-emoji">' + sim.thumbnail_emoji + '</div>' +
-            '<div class="card-body">' +
-              '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">' +
-                '<span class="badge badge-primary text-xs">' + sim.subject + '</span>' +
-                '<span class="badge badge-neutral text-xs">Class ' + sim.class + '</span>' +
-              '</div>' +
-              '<h3 class="sim-card-title">' + sim.title + '</h3>' +
-              '<p class="sim-card-desc">' + sim.description + '</p>' +
-              '<button type="button" class="btn btn-primary btn-sm btn-launch-sim" style="width:100%;" data-sim-id="' + sim.id + '">' +
-                '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px; height:14px;"><polygon points="5 3 19 12 5 21 5 3"/></svg>' +
-                'Launch Simulation' +
+          '<div class="sim-card" data-sim-id="' + sim.id + '">' +
+            '<div class="sim-card-banner">' +
+              '<div class="sim-banner-flask">' + flaskIconSvg + '</div>' +
+            '</div>' +
+            '<div class="sim-card-content">' +
+              '<span class="sim-tag-pill">' + sim.subject + '</span>' +
+              '<h3 class="sim-title">' + sim.title + '</h3>' +
+              '<p class="sim-desc">' + sim.description + '</p>' +
+              '<button type="button" class="sim-launch-link" data-sim-id="' + sim.id + '">' +
+                'Open simulation &rarr;' +
               '</button>' +
             '</div>' +
           '</div>'
         );
       }).join('');
 
-      var launchBtns = grid.querySelectorAll('.btn-launch-sim, .sim-card');
+      var launchBtns = grid.querySelectorAll('.sim-launch-link, .sim-card');
       launchBtns.forEach(function (btn) {
         btn.addEventListener('click', function (e) {
           var sid = this.getAttribute('data-sim-id');
@@ -2009,11 +2018,18 @@
         chips.forEach(function (c) { c.classList.remove('active'); });
         this.classList.add('active');
         activeFilter = this.getAttribute('data-subject');
-        renderGrid(activeFilter);
+        renderGrid();
       };
     });
 
-    renderGrid(activeFilter);
+    if (gradeSelect) {
+      gradeSelect.onchange = function () {
+        activeGrade = this.value;
+        renderGrid();
+      };
+    }
+
+    renderGrid();
   }
 
   // ─── 17. PAGE: CURATED VIDEO LESSONS ───────────────────────────────────────
@@ -2339,10 +2355,86 @@
   // ─── 20. PAGE: POINTS, STREAKS & BADGES ────────────────────────────────────
   function renderPointsView() {
     var student = getActiveStudent();
+    renderTeacherHeroCard('pointsTeacherHeroContainer');
+
     var ptsDisplay = document.getElementById('pointsTotalDisplay');
+    var ptsBigTotal = document.getElementById('pointsBigTotal');
+    var ptsBigStreak = document.getElementById('pointsBigStreak');
+    var ptsTeacherGiven = document.getElementById('pointsTeacherGiven');
     var streakDisplay = document.getElementById('pointsStreakDisplay');
-    if (ptsDisplay) ptsDisplay.textContent = (student.points || STATE.points).toLocaleString();
+    var rankDisplay = document.getElementById('pointsRankDisplay');
+
+    var allHist = STATE.points_history || DATA.points_history || [];
+    var studentHist = allHist.filter(function (h) {
+      var matchStudent = (h.student_id === currentStudentId || !h.student_id);
+      var matchCenter = currentCenterId === 'all'
+        ? (student.enrolled_centers || []).indexOf(h.center_id) !== -1 || !h.center_id
+        : h.center_id === currentCenterId;
+      return matchStudent && matchCenter;
+    });
+
+    var totalFilteredPoints = studentHist.reduce(function (sum, h) { return sum + (h.points || 0); }, 0);
+    var teacherPoints = studentHist.filter(function (h) { return h.award_type === 'teacher'; })
+      .reduce(function (sum, h) { return sum + (h.points || 0); }, 0);
+
+    if (ptsDisplay) ptsDisplay.textContent = (currentCenterId === 'all' ? (student.points || STATE.points) : totalFilteredPoints).toLocaleString();
+    if (ptsBigTotal) ptsBigTotal.textContent = (currentCenterId === 'all' ? (student.points || STATE.points) : totalFilteredPoints).toLocaleString();
+    if (ptsBigStreak) ptsBigStreak.textContent = (student.streak || STATE.streak) + ' Days 🔥';
+    if (ptsTeacherGiven) ptsTeacherGiven.textContent = teacherPoints + ' pts';
     if (streakDisplay) streakDisplay.textContent = (student.streak || STATE.streak) + ' Days';
+    if (rankDisplay) rankDisplay.textContent = (currentCenterId === 'all' ? '#6' : '#2 in ' + (getActiveCenter() ? getActiveCenter().name.split(' ')[0] : 'Batch'));
+
+    // Points Filter (All, Teacher Awards, System Milestones)
+    var pointFilterChips = document.querySelectorAll('#pointsTypeFilter .chip');
+    var activePointType = 'all';
+
+    var renderHistoryList = function () {
+      var histContainer = document.getElementById('pointsHistoryList');
+      if (!histContainer) return;
+
+      var displayedHist = studentHist.filter(function (h) {
+        if (activePointType === 'all') return true;
+        return h.award_type === activePointType;
+      });
+
+      if (displayedHist.length === 0) {
+        histContainer.innerHTML = '<div class="text-sm text-muted p-16 text-center">No points events found for this filter selection.</div>';
+        return;
+      }
+
+      histContainer.innerHTML = displayedHist.slice(0, 10).map(function (h) {
+        var isTeacher = h.award_type === 'teacher';
+        var awardBadge = isTeacher
+          ? '<span class="badge badge-accent text-xs">🏅 Teacher Honor</span>'
+          : '<span class="badge badge-neutral text-xs">⚙️ System Milestone</span>';
+
+        return (
+          '<div class="points-history-item" style="display:flex; align-items:center; gap:12px; padding:12px 14px; border-bottom:1px solid var(--border);">' +
+            '<div style="flex:1;">' +
+              '<div style="display:flex; align-items:center; gap:8px; margin-bottom:3px; flex-wrap:wrap;">' +
+                '<span class="text-sm fw-700">' + h.description + '</span>' +
+                awardBadge +
+              '</div>' +
+              '<div class="text-xs text-muted">' +
+                h.date + (h.center_name ? ' &bull; 🏛️ ' + h.center_name : '') + (h.awarded_by ? ' &bull; Awarded by: <strong>' + h.awarded_by + '</strong>' : '') +
+              '</div>' +
+            '</div>' +
+            '<span class="badge badge-accent" style="font-size:12px; font-weight:800;">+' + h.points + ' pts</span>' +
+          '</div>'
+        );
+      }).join('');
+    };
+
+    pointFilterChips.forEach(function (chip) {
+      chip.onclick = function () {
+        pointFilterChips.forEach(function (c) { c.classList.remove('active'); });
+        this.classList.add('active');
+        activePointType = this.getAttribute('data-point-filter');
+        renderHistoryList();
+      };
+    });
+
+    renderHistoryList();
 
     // Leaderboard
     var lbContainer = document.getElementById('leaderboardList');
@@ -2376,25 +2468,8 @@
       }
     }
 
-    // Points History
-    var histContainer = document.getElementById('pointsHistoryList');
-    if (histContainer) {
-      var hist = STATE.points_history || DATA.points_history || [];
-      histContainer.innerHTML = hist.slice(0, 8).map(function (h) {
-        return (
-          '<div class="points-history-item">' +
-            '<div style="flex:1;">' +
-              '<div class="text-sm fw-700">' + h.description + '</div>' +
-              '<div class="text-xs text-muted">' + h.date + '</div>' +
-            '</div>' +
-            '<span class="badge badge-accent">+' + h.points + ' pts</span>' +
-          '</div>'
-        );
-      }).join('');
-    }
-
     // Badges Grid
-    var badgesContainer = document.getElementById('badgesGrid');
+    var badgesContainer = document.getElementById('badgesContainer');
     if (badgesContainer) {
       var badges = STATE.badges || DATA.badges || [];
       badgesContainer.innerHTML = badges.map(function (b) {
@@ -2700,6 +2775,93 @@
   }
 
   // ─── 23. PAGE: SETTINGS & HOUSEHOLD PROFILES ───────────────────────────────
+  // ─── 23. PAGE: SETTINGS & HOUSEHOLD PROFILES ───────────────────────────────
+  function openEditStudentContactsModal() {
+    var student = getActiveStudent();
+
+    var modalHtml =
+      '<form id="formEditStudentContacts" style="display:flex; flex-direction:column; gap:16px;">' +
+        '<div style="background:var(--surface-muted); padding:10px 14px; border-radius:var(--radius-sm); border:1px solid var(--border); font-size:12.5px; color:var(--text-secondary);">' +
+          'All guardian and parent mobile numbers must be verified for two-factor login and academic alerts.' +
+        '</div>' +
+        '<div>' +
+          '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">' +
+            '<label class="form-label" style="margin:0;">Father\'s Full Name &bull; Mobile No.</label>' +
+            '<span class="badge badge-success text-xs">✓ Verified</span>' +
+          '</div>' +
+          '<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">' +
+            '<input type="text" id="editFatherName" class="form-input" value="' + (student.father_name || 'Rajesh Mehta') + '" required placeholder="Father Name">' +
+            '<input type="text" id="editFatherPhone" class="form-input" value="' + (student.father_phone || '+91 98111 22334') + '" required placeholder="Father Phone">' +
+          '</div>' +
+        '</div>' +
+        '<div>' +
+          '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">' +
+            '<label class="form-label" style="margin:0;">Mother\'s Full Name &bull; Mobile No.</label>' +
+            '<span class="badge badge-success text-xs">✓ Verified</span>' +
+          '</div>' +
+          '<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">' +
+            '<input type="text" id="editMotherName" class="form-input" value="' + (student.mother_name || 'Sunita Mehta') + '" required placeholder="Mother Name">' +
+            '<input type="text" id="editMotherPhone" class="form-input" value="' + (student.mother_phone || '+91 98765 11223') + '" required placeholder="Mother Phone">' +
+          '</div>' +
+        '</div>' +
+        '<div>' +
+          '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">' +
+            '<label class="form-label" style="margin:0;">Guardian\'s Name &bull; Mobile No.</label>' +
+            '<span class="badge badge-success text-xs">✓ Verified</span>' +
+          '</div>' +
+          '<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">' +
+            '<input type="text" id="editGuardianName" class="form-input" value="' + (student.guardian_name || 'Dr. Rameshwar Mehta') + '" required placeholder="Guardian Name">' +
+            '<input type="text" id="editGuardianPhone" class="form-input" value="' + (student.guardian_phone || '+91 97123 44556') + '" required placeholder="Guardian Phone">' +
+          '</div>' +
+        '</div>' +
+        '<div style="display:flex; justify-content:flex-end; gap:10px; margin-top:8px;">' +
+          '<button type="button" class="btn btn-secondary" id="btnCancelEditContacts">Cancel</button>' +
+          '<button type="submit" class="btn btn-primary">Save &amp; Verify Contacts</button>' +
+        '</div>' +
+      '</form>';
+
+    var closeModal = openModal({
+      title: 'Edit Parent & Guardian Verified Contacts',
+      body: modalHtml,
+      onReady: function (overlay) {
+        var form = overlay.querySelector('#formEditStudentContacts');
+        var cancel = overlay.querySelector('#btnCancelEditContacts');
+        if (cancel) cancel.onclick = closeModal;
+
+        if (form) {
+          form.onsubmit = function (e) {
+            e.preventDefault();
+            var fName = document.getElementById('editFatherName').value.trim();
+            var fPhone = document.getElementById('editFatherPhone').value.trim();
+            var mName = document.getElementById('editMotherName').value.trim();
+            var mPhone = document.getElementById('editMotherPhone').value.trim();
+            var gName = document.getElementById('editGuardianName').value.trim();
+            var gPhone = document.getElementById('editGuardianPhone').value.trim();
+
+            student.father_name = fName;
+            student.father_phone = fPhone;
+            student.father_phone_verified = true;
+            student.mother_name = mName;
+            student.mother_phone = mPhone;
+            student.mother_phone_verified = true;
+            student.guardian_name = gName;
+            student.guardian_phone = gPhone;
+            student.guardian_phone_verified = true;
+
+            // Sync legacy parent_name/phone with mother/father
+            student.parent_name = mName || fName;
+            student.parent_phone = mPhone || fPhone;
+
+            Store.set('vs_students', STATE.students);
+            closeModal();
+            showToast('✅ Parent & Guardian contacts successfully verified and updated!', 'success', 3500);
+            renderSettingsView();
+          };
+        }
+      }
+    });
+  }
+
   function renderSettingsView() {
     var student = getActiveStudent();
     var allStudents = STATE.students || DATA.students || [];
@@ -2707,16 +2869,36 @@
     var avatar = document.getElementById('settingsAvatar');
     var nameEl = document.getElementById('settingsName');
     var rollEl = document.getElementById('settingsRoll');
-    var parentEl = document.getElementById('settingsParent');
+    var fatherEl = document.getElementById('settingsFather');
+    var motherEl = document.getElementById('settingsMother');
+    var guardianEl = document.getElementById('settingsGuardian');
     var dobEl = document.getElementById('settingsDob');
     var themeToggle = document.getElementById('settingsThemeToggle');
     var resetBtn = document.getElementById('btnResetDemoData');
+    var editContactsBtn = document.getElementById('btnEditStudentContacts');
 
     if (avatar) avatar.textContent = student.photo_initials || 'ST';
     if (nameEl) nameEl.textContent = student.name;
     if (rollEl) rollEl.textContent = 'Roll No: ' + student.roll + ' • ' + (student.class || 'Class 10') + ' (' + (student.board || 'CBSE') + ')';
-    if (parentEl) parentEl.textContent = student.parent_name + ' (' + student.parent_phone + ')';
+    
+    if (fatherEl) {
+      fatherEl.innerHTML = '<span>' + (student.father_name || 'Rajesh Mehta') + ' (' + (student.father_phone || '+91 98111 22334') + ')</span>' +
+        '<span class="badge badge-success text-xs">✓ Verified</span>';
+    }
+    if (motherEl) {
+      motherEl.innerHTML = '<span>' + (student.mother_name || 'Sunita Mehta') + ' (' + (student.mother_phone || '+91 98765 11223') + ')</span>' +
+        '<span class="badge badge-success text-xs">✓ Verified</span>';
+    }
+    if (guardianEl) {
+      guardianEl.innerHTML = '<span>' + (student.guardian_name || 'Dr. Rameshwar Mehta') + ' (' + (student.guardian_phone || '+91 97123 44556') + ')</span>' +
+        '<span class="badge badge-success text-xs">✓ Verified</span>';
+    }
+
     if (dobEl) dobEl.textContent = student.dob;
+
+    if (editContactsBtn) {
+      editContactsBtn.onclick = openEditStudentContactsModal;
+    }
 
     if (themeToggle) {
       themeToggle.checked = STATE.theme === 'dark';
