@@ -2462,45 +2462,152 @@
 
     renderHistoryList();
 
-    // 3. Learning Circle Batch Leaderboard
-    var lbContainer = document.getElementById('leaderboardList');
-    var showRankToggle = document.getElementById('toggleShowRank');
-    if (lbContainer) {
-      var fullBoard = DATA.leaderboard || [];
-      var top5 = fullBoard.slice(0, 5);
-      var showSelf = showRankToggle ? showRankToggle.checked : true;
+    // 3. Batch Point Leaderboard & Peer Motivation
+    var batchSelector = document.getElementById('batchLeaderboardSelector');
+    var batchLbContainer = document.getElementById('batchLeaderboardList');
+    var batchMotivationBanner = document.getElementById('batchMotivationBanner');
+    var batchDataMap = DATA.batch_leaderboards || {};
+    var batchKeys = Object.keys(batchDataMap);
 
-      var rows = top5.slice();
-      if (showSelf) {
-        var selfEntry = fullBoard.find(function (e) { return e.is_self; });
-        if (selfEntry && top5.indexOf(selfEntry) === -1) {
-          rows.push(selfEntry);
-        }
+    // Determine default batch based on student & center
+    var defaultBatch = 'Class 10 Science & Maths Morning';
+    if (student && student.id === 'student-2') {
+      defaultBatch = 'Class 8-10 English Literature Club';
+    } else if (currentCenterId !== 'all') {
+      var actCenter = getActiveCenter();
+      if (actCenter && actCenter.active_batch && batchDataMap[actCenter.active_batch]) {
+        defaultBatch = actCenter.active_batch;
       }
+    }
 
-      lbContainer.innerHTML = rows.map(function (row, idx) {
+    if (batchSelector) {
+      var currentSelected = batchSelector.value || defaultBatch;
+      if (!batchDataMap[currentSelected]) currentSelected = batchKeys[0] || defaultBatch;
+
+      batchSelector.innerHTML = batchKeys.map(function (bKey) {
+        var isEnrolled = false;
+        var bInfo = batchDataMap[bKey];
+        if (bInfo && bInfo.students) {
+          isEnrolled = bInfo.students.some(function (s) {
+            return s.student_id === currentStudentId || s.student_name === student.name;
+          });
+        }
+        var label = bKey + (isEnrolled ? ' (Your Batch)' : '');
+        var isSelected = bKey === currentSelected ? ' selected' : '';
+        return '<option value="' + bKey + '"' + isSelected + '>' + label + '</option>';
+      }).join('');
+
+      var renderBatchView = function (bName) {
+        var bInfo = batchDataMap[bName];
+        if (!bInfo || !bInfo.students) return;
+
+        var studentsList = bInfo.students || [];
+        var selfInBatch = studentsList.find(function (s) {
+          return s.student_id === currentStudentId || s.student_name === student.name;
+        });
+
+        // Dynamic Motivation Banner
+        if (batchMotivationBanner) {
+          if (selfInBatch) {
+            if (selfInBatch.rank === 1) {
+              batchMotivationBanner.innerHTML = (
+                '<div class="batch-motivation-content">' +
+                  '<span class="batch-motivation-icon">🏆</span>' +
+                  '<div style="flex:1;">' +
+                    '<div class="batch-motivation-title">Incredible! You are Rank #1 in this batch!</div>' +
+                    '<div class="batch-motivation-sub">You lead with <strong>' + selfInBatch.points.toLocaleString() + ' pts</strong> &bull; ' + (selfInBatch.streak || 'High streak') + '. Keep practicing to defend your top position!</div>' +
+                  '</div>' +
+                '</div>'
+              );
+            } else {
+              var peerAbove = studentsList.find(function (s) { return s.rank === (selfInBatch.rank - 1); });
+              var ptsGap = peerAbove ? (peerAbove.points - selfInBatch.points) : 60;
+              batchMotivationBanner.innerHTML = (
+                '<div class="batch-motivation-content">' +
+                  '<span class="batch-motivation-icon">⚡</span>' +
+                  '<div style="flex:1;">' +
+                    '<div class="batch-motivation-title"><strong>' + student.name + '</strong> is <strong>Rank #' + selfInBatch.rank + '</strong> in this batch!</div>' +
+                    '<div class="batch-motivation-sub">Only <strong>' + ptsGap + ' pts</strong> needed to overtake <strong>' + (peerAbove ? peerAbove.student_name : 'the peer ahead') + '</strong> for Rank #' + (selfInBatch.rank - 1) + '! Complete 1 quiz or test to climb up.</div>' +
+                  '</div>' +
+                '</div>'
+              );
+            }
+          } else {
+            batchMotivationBanner.innerHTML = (
+              '<div class="batch-motivation-content">' +
+                '<span class="batch-motivation-icon">👀</span>' +
+                '<div style="flex:1;">' +
+                  '<div class="batch-motivation-title">Viewing ' + bName + ' (' + (bInfo.center || 'Faculty') + ')</div>' +
+                  '<div class="batch-motivation-sub">Live point standings of batchmates. Switch to your enrolled batch to track your ranking.</div>' +
+                '</div>' +
+              '</div>'
+            );
+          }
+        }
+
+        // Batch Peers List
+        if (batchLbContainer) {
+          batchLbContainer.innerHTML = studentsList.map(function (row, idx) {
+            var isSelf = (row.student_id === currentStudentId || row.student_name === student.name);
+            var initials = (row.student_name || 'ST').split(' ').map(function (w) { return w[0]; }).join('').substring(0, 2).toUpperCase();
+            var posStr = String(row.rank || (idx + 1)).padStart(2, '0');
+            var posClass = row.rank === 1 ? ' gold' : (row.rank === 2 ? ' silver' : (row.rank === 3 ? ' bronze' : ''));
+            var medalEmoji = row.badge || (row.rank === 1 ? '🥇' : (row.rank === 2 ? '🥈' : (row.rank === 3 ? '🥉' : '')));
+
+            return (
+              '<div class="lb-row' + (isSelf ? ' self' : '') + '">' +
+                '<div class="lb-user-info">' +
+                  '<span class="lb-pos' + posClass + '">' + medalEmoji + ' ' + posStr + '</span>' +
+                  '<span class="lb-avatar">' + initials + '</span>' +
+                  '<div style="overflow:hidden; text-overflow:ellipsis;">' +
+                    '<span class="lb-name-text">' + row.student_name + '</span>' +
+                    (isSelf ? ' <span class="badge badge-primary text-xs" style="margin-left:4px;">You</span>' : '') +
+                    (row.role_tag ? '<span class="lb-streak-tag">' + (row.streak ? row.streak + ' &bull; ' : '') + row.role_tag + '</span>' : '') +
+                  '</div>' +
+                '</div>' +
+                '<span class="lb-points-val">' + row.points.toLocaleString() + ' pts</span>' +
+              '</div>'
+            );
+          }).join('');
+        }
+      };
+
+      batchSelector.onchange = function () {
+        renderBatchView(this.value);
+      };
+
+      renderBatchView(currentSelected);
+    }
+
+    // 4. Top Scholars In All Batches (Overall Toppers Table - Strictly Top 5, No Forced Self Rank)
+    var topScholarsContainer = document.getElementById('topScholarsList');
+    if (topScholarsContainer) {
+      var allScholars = DATA.leaderboard || [];
+      // Strictly top 5 scholars across all batches - do not append self if outside top 5!
+      var top5 = allScholars.slice(0, 5);
+
+      topScholarsContainer.innerHTML = top5.map(function (row, idx) {
+        var isSelf = (row.student_id === currentStudentId || row.student_name === student.name);
         var initials = (row.student_name || 'ST').split(' ').map(function (w) { return w[0]; }).join('').substring(0, 2).toUpperCase();
-        var posStr = String(idx + 1).padStart(2, '0');
+        var posStr = String(row.rank || (idx + 1)).padStart(2, '0');
+        var posClass = row.rank === 1 ? ' gold' : (row.rank === 2 ? ' silver' : (row.rank === 3 ? ' bronze' : ''));
+        var medalEmoji = row.badge || (row.rank === 1 ? '🥇' : (row.rank === 2 ? '🥈' : (row.rank === 3 ? '🥉' : '')));
 
         return (
-          '<div class="lb-row' + (row.is_self ? ' self' : '') + '">' +
+          '<div class="lb-row' + (isSelf ? ' self' : '') + '">' +
             '<div class="lb-user-info">' +
-              '<span class="lb-pos">' + posStr + '</span>' +
+              '<span class="lb-pos' + posClass + '">' + medalEmoji + ' ' + posStr + '</span>' +
               '<span class="lb-avatar">' + initials + '</span>' +
               '<div style="overflow:hidden; text-overflow:ellipsis;">' +
                 '<span class="lb-name-text">' + row.student_name + '</span>' +
-                (row.is_self ? ' <span class="badge badge-primary text-xs" style="margin-left:4px;">You</span>' : '') +
-                '<span class="lb-center-pill">' + (row.center || 'Stellar Academy') + '</span>' +
+                (isSelf ? ' <span class="badge badge-primary text-xs" style="margin-left:4px;">You</span>' : '') +
+                '<span class="lb-center-pill">' + (row.center || 'Stellar Academy') + ' &bull; ' + (row.batch || 'Batch') + '</span>' +
               '</div>' +
             '</div>' +
             '<span class="lb-points-val">' + row.points.toLocaleString() + ' pts</span>' +
           '</div>'
         );
       }).join('');
-
-      if (showRankToggle) {
-        showRankToggle.onchange = function () { renderPointsView(); };
-      }
     }
   }
 

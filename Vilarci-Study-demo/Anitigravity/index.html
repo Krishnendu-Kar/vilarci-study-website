@@ -913,24 +913,56 @@
             </div>
           </article>
 
-          <!-- Right Column: Learning Circle Batch Leaderboard -->
-          <article class="card">
-            <div class="card-header">
-              <div>
-                <h2 class="card-title">Learning Circle</h2>
-                <div class="text-xs text-muted" style="margin-top:2px;">Top learners plus your own batch standing</div>
+          <!-- Right Column: Dual Motivation Boards (Batch Leaderboard + Top Scholars In All Batches) -->
+          <div class="leaderboard-dual-column" style="display:flex; flex-direction:column; gap:20px;">
+            <!-- 1. Per-Batch Classroom Leaderboard (Peer motivation) -->
+            <article class="card batch-leaderboard-card">
+              <div class="card-header" style="flex-wrap:wrap; gap:10px; justify-content:space-between; align-items:center;">
+                <div>
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <h2 class="card-title" style="font-size:16px;">Batch Point Leaderboard</h2>
+                    <span class="badge badge-accent" style="font-size:10.5px; padding:2px 8px;">Peer Motivation</span>
+                  </div>
+                  <div class="text-xs text-muted" style="margin-top:2px;">Compare points &amp; compete with classmates in your batch</div>
+                </div>
+                <div>
+                  <select id="batchLeaderboardSelector" class="form-select form-select-sm" style="font-size:11.5px; padding:4px 10px; border-radius:18px; border:1px solid var(--border); background:var(--surface); color:var(--text-main); font-weight:600; cursor:pointer;" aria-label="Select batch for leaderboard">
+                    <!-- Populated dynamically by JS -->
+                  </select>
+                </div>
               </div>
-              <div style="display:flex; align-items:center; gap:6px;">
-                <label for="toggleShowRank" class="text-xs text-muted">Show my rank:</label>
-                <input type="checkbox" id="toggleShowRank" checked class="toggle-input">
+
+              <!-- Classroom Peer Motivation Callout Banner -->
+              <div class="batch-motivation-banner" id="batchMotivationBanner">
+                <!-- Populated dynamically by JS -->
               </div>
-            </div>
-            <div class="card-body" style="padding:0;">
-              <div class="leaderboard-list" id="leaderboardList">
-                <!-- Populated by JS -->
+
+              <div class="card-body" style="padding:0;">
+                <div class="leaderboard-list" id="batchLeaderboardList">
+                  <!-- Populated dynamically by JS with classmates & points -->
+                </div>
               </div>
-            </div>
-          </article>
+            </article>
+
+            <!-- 2. Top Scholars In All Batches (Overall Toppers Table - No forced user rank) -->
+            <article class="card top-scholars-card">
+              <div class="card-header" style="justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                <div>
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <h2 class="card-title" style="font-size:16px;">Top Scholars In All Batches</h2>
+                    <span class="badge" style="background:rgba(217, 119, 6, 0.12); color:#b45309; font-size:10.5px; padding:2px 8px; font-weight:700;">🏆 All-Batches Hall of Fame</span>
+                  </div>
+                  <div class="text-xs text-muted" style="margin-top:2px;">Top 5 performers across all academic batches &amp; coaching centers</div>
+                </div>
+                <span class="text-xs text-muted font-mono" style="font-weight:700;">Top 5 Scholars</span>
+              </div>
+              <div class="card-body" style="padding:0;">
+                <div class="leaderboard-list" id="topScholarsList">
+                  <!-- Populated by JS strictly with overall toppers (no forced user rank) -->
+                </div>
+              </div>
+            </article>
+          </div>
         </div>
       </div>
     </section>

@@ -547,17 +547,70 @@ window.DATA = {
     }
   ],
 
-  // ─── 11. TABLE: leaderboard ────────────────────────────────────────────────
+  // ─── 11. TABLE: leaderboard (Top Scholars In All Batches) ───────────────────
   leaderboard: [
-    { rank: 1,  student_name: 'Rahul Sharma',    points: 1840, badge: '🥇', center: 'Stellar Academy' },
-    { rank: 2,  student_name: 'Ananya Patel',    points: 1780, badge: '🥈', center: 'Apex Chemistry' },
-    { rank: 3,  student_name: 'Kabir Mehta',     points: 1650, badge: '🥉', center: 'Stellar Academy' },
-    { rank: 4,  student_name: 'Meera Joshi',     points: 1520, badge: '⭐', center: 'Zenith Biology' },
-    { rank: 5,  student_name: 'Vivek Gupta',     points: 1490, badge: '⭐', center: 'Horizon English' },
-    { rank: 6,  student_name: 'Aryan Mehta',     points: 1420, badge: '⭐', center: 'Stellar Academy', is_self: true },
-    { rank: 7,  student_name: 'Tanvi Desai',     points: 1380, badge: '⭐', center: 'Stellar Academy' },
-    { rank: 8,  student_name: 'Riya Kapoor',     points: 1190, badge: '⭐', center: 'Apex Chemistry' }
+    { rank: 1,  student_name: 'Rahul Sharma',    points: 1840, badge: '🥇', center: 'Stellar Academy', batch: 'Class 10 Science & Maths Morning', student_id: 'ext-1' },
+    { rank: 2,  student_name: 'Ananya Patel',    points: 1780, badge: '🥈', center: 'Apex Chemistry', batch: 'Class 10 Board Excellence Batch', student_id: 'ext-7' },
+    { rank: 3,  student_name: 'Kabir Mehta',     points: 1650, badge: '🥉', center: 'Stellar Academy', batch: 'Class 12 Super 30 PCM', student_id: 'student-3' },
+    { rank: 4,  student_name: 'Meera Joshi',     points: 1520, badge: '⭐', center: 'Zenith Biology', batch: 'Pre-Medical & High School Biology', student_id: 'ext-11' },
+    { rank: 5,  student_name: 'Vivek Gupta',     points: 1490, badge: '⭐', center: 'Stellar Academy', batch: 'Class 10 Science & Maths Morning', student_id: 'ext-2' },
+    { rank: 6,  student_name: 'Aryan Mehta',     points: 1420, badge: '⭐', center: 'Stellar Academy', batch: 'Class 10 Science & Maths Morning', student_id: 'student-1' },
+    { rank: 7,  student_name: 'Tanvi Desai',     points: 1380, badge: '⭐', center: 'Stellar Academy', batch: 'Class 10 Science & Maths Morning', student_id: 'ext-3' },
+    { rank: 8,  student_name: 'Rohan Verma',     points: 1310, badge: '⭐', center: 'Apex Chemistry', batch: 'Class 10 Board Excellence Batch', student_id: 'ext-8' },
+    { rank: 9,  student_name: 'Sneha Kulkarni',  points: 1290, badge: '⭐', center: 'Zenith Biology', batch: 'Pre-Medical & High School Biology', student_id: 'ext-12' },
+    { rank: 10, student_name: 'Riya Kapoor',     points: 1190, badge: '⭐', center: 'Apex Chemistry', batch: 'Class 10 Board Excellence Batch', student_id: 'ext-9' }
   ],
+
+  // ─── 11B. TABLE: batch_leaderboards (Per-Batch Classroom Leaderboards for Peer Motivation) ────
+  batch_leaderboards: {
+    'Class 10 Science & Maths Morning': {
+      center: 'Stellar Academy',
+      subject: 'Maths & Physics',
+      teacher: 'Er. Alok Sharma',
+      students: [
+        { rank: 1, student_name: 'Rahul Sharma', points: 1840, badge: '🥇', streak: '22d streak', role_tag: 'Batch Topper', student_id: 'ext-1' },
+        { rank: 2, student_name: 'Vivek Gupta',  points: 1490, badge: '🥈', streak: '18d streak', role_tag: 'Rising Challenger', student_id: 'ext-2' },
+        { rank: 3, student_name: 'Aryan Mehta',  points: 1420, badge: '🥉', streak: '14d streak', role_tag: 'Active Learner', student_id: 'student-1' },
+        { rank: 4, student_name: 'Tanvi Desai',  points: 1380, badge: '⭐', streak: '11d streak', role_tag: 'Top Quizzer', student_id: 'ext-3' },
+        { rank: 5, student_name: 'Rohan Sen',    points: 1260, badge: '⭐', streak: '9d streak',  role_tag: 'Consistent', student_id: 'ext-4' },
+        { rank: 6, student_name: 'Aditi Rao',    points: 1180, badge: '⭐', streak: '7d streak',  role_tag: 'Focus Ace', student_id: 'ext-5' },
+        { rank: 7, student_name: 'Parth Joshi',  points: 1050, badge: '⭐', streak: '5d streak',  role_tag: 'Steady Effort', student_id: 'ext-6' }
+      ]
+    },
+    'Class 10 Board Excellence Batch': {
+      center: 'Apex Chemistry Institute',
+      subject: 'Chemistry',
+      teacher: 'Dr. Rashmi Verma',
+      students: [
+        { rank: 1, student_name: 'Ananya Patel', points: 1780, badge: '🥇', streak: '20d streak', role_tag: 'Batch Topper', student_id: 'ext-7' },
+        { rank: 2, student_name: 'Rohan Verma',  points: 1310, badge: '🥈', streak: '15d streak', role_tag: 'Lab Master', student_id: 'ext-8' },
+        { rank: 3, student_name: 'Aryan Mehta',  points: 1220, badge: '🥉', streak: '12d streak', role_tag: 'Active', student_id: 'student-1' },
+        { rank: 4, student_name: 'Riya Kapoor',  points: 1190, badge: '⭐', streak: '10d streak', role_tag: 'Formula Whiz', student_id: 'ext-9' },
+        { rank: 5, student_name: 'Devansh Shah', points: 1040, badge: '⭐', streak: '6d streak',  role_tag: 'Consistent', student_id: 'ext-10' }
+      ]
+    },
+    'Pre-Medical & High School Biology': {
+      center: 'Zenith Biology Tuitions',
+      subject: 'Biology',
+      teacher: 'Prof. Arindam Sen',
+      students: [
+        { rank: 1, student_name: 'Meera Joshi',    points: 1520, badge: '🥇', streak: '17d streak', role_tag: 'Genetics Topper', student_id: 'ext-11' },
+        { rank: 2, student_name: 'Sneha Kulkarni', points: 1290, badge: '🥈', streak: '14d streak', role_tag: 'Physiology Ace', student_id: 'ext-12' },
+        { rank: 3, student_name: 'Aryan Mehta',    points: 1150, badge: '🥉', streak: '10d streak', role_tag: 'Active', student_id: 'student-1' },
+        { rank: 4, student_name: 'Ishaan Roy',     points: 980,  badge: '⭐', streak: '8d streak',  role_tag: 'Cell Bio Pro', student_id: 'ext-13' }
+      ]
+    },
+    'Class 8-10 English Literature Club': {
+      center: 'Horizon English Studio',
+      subject: 'English',
+      teacher: 'Mrs. Kavita Roy',
+      students: [
+        { rank: 1, student_name: 'Diya Mukherjee', points: 1460, badge: '🥇', streak: '16d streak', role_tag: 'Poetry Critic', student_id: 'ext-14' },
+        { rank: 2, student_name: 'Priya Mehta',    points: 1350, badge: '🥈', streak: '12d streak', role_tag: 'Grammar Ace', student_id: 'student-2' },
+        { rank: 3, student_name: 'Aman Sheikh',    points: 1120, badge: '🥉', streak: '9d streak',  role_tag: 'Essayist', student_id: 'ext-15' }
+      ]
+    }
+  },
 
   // ─── 12. TABLE: mcqs ───────────────────────────────────────────────────────
   mcqs: [
